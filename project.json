@@ -1,0 +1,61 @@
+{
+  "title": "Fusion Common — общее ядро термометрии, калибровок и форматов данных (.fus, .vtaz, .tda, .fus-mdt)",
+  "priority_patterns": [
+    "README.md",
+    "AGENTS.md",
+    "fusion_common/models.py",
+    "fusion_common/formats.py"
+  ],
+  "always_ignore": [
+    "uv.lock",
+    ".python-version",
+    "CLAUDE.md",
+    "GEMINI.md",
+    ".claude/**",
+    ".vscode/**"
+  ],
+  "categories": [
+    {
+      "name": "Fusion-Common: документация и руководство",
+      "patterns": [
+        "README.md",
+        "AGENTS.md",
+        "LICENSE*"
+      ],
+      "default": false,
+      "description": "Описание общей библиотеки, ролевые инструкции и лицензия GPLv3",
+      "tags": ["project", "docs"]
+    },
+    {
+      "name": "Fusion-Common: ядро термометрии, калибровок и форматов",
+      "patterns": [
+        "fusion_common/*.py"
+      ],
+      "default": false,
+      "description": "По-канальные модели измерений, полиморфные термопары и калибровки, кодеки .fus, .vtaz, .tda, .fus-mdt",
+      "tags": ["project", "programming"]
+    },
+    {
+      "name": "Fusion-Common: модульные тесты",
+      "patterns": [
+        "tests/*.py"
+      ],
+      "default": false,
+      "description": "Тесты термометрии, калибровок и круговой сериализации всех форматов",
+      "tags": ["project", "programming"]
+    },
+    {
+      "name": "Fusion-Common: сборка и среда",
+      "patterns": [
+        "pyproject.toml",
+        "mypy.ini",
+        "vulture_whitelist.py",
+        ".pre-commit-config.yaml",
+        ".gitignore"
+      ],
+      "default": false,
+      "description": "Конфигурация пакета uv, линтеров, vulture и pre-commit",
+      "tags": ["project", "config"]
+    }
+  ]
+}
