@@ -255,8 +255,9 @@ def test_load_real_legacy_fus_mdt_if_present() -> None:
 
 def test_splash_rendering_qimage(tmp_path: Path) -> None:
     import sys
-    from PySide6.QtWidgets import QApplication
+
     from fusion_common import generate_splash_png, get_pyproject_version
+    from PySide6.QtWidgets import QApplication
 
     _app = QApplication.instance() or QApplication(sys.argv)
     repo_root = Path(__file__).resolve().parents[1]  # noqa: MI001
