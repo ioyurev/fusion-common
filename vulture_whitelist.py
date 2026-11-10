@@ -30,11 +30,17 @@ from fusion_common import (
     load_measurement,
     load_tda,
     load_vtaz,
+    finish_startup_splash,
+    generate_splash_png,
+    get_pyproject_version,
     make_vr_thermocouple,
     make_xa_thermocouple,
     migrate_manifest_dict,
+    render_splash_image,
     save_fus,
+    show_startup_splash,
 )
+from fusion_common.splash import main_cli
 
 _PUBLIC_API = (
     CURRENT_SCHEMA_VERSION,
@@ -97,8 +103,14 @@ _PUBLIC_API = (
     load_measurement,
     load_tda,
     load_vtaz,
+    finish_startup_splash,
+    generate_splash_png,
+    get_pyproject_version,
+    main_cli,
     make_vr_thermocouple,
     make_xa_thermocouple,
     migrate_manifest_dict,
+    render_splash_image,
     save_fus,
+    show_startup_splash,
 )

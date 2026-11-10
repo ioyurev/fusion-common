@@ -251,3 +251,23 @@ def test_load_real_legacy_fus_mdt_if_present() -> None:
     record = load_measurement(legacy_file)
     assert record.source_format == "FUS-MDT"
     assert len(record.time_array) > 0
+
+
+def test_splash_rendering_qimage(tmp_path: Path) -> None:
+    import sys
+    from PySide6.QtWidgets import QApplication
+    from fusion_common import generate_splash_png, get_pyproject_version
+
+    _app = QApplication.instance() or QApplication(sys.argv)
+    repo_root = Path(__file__).resolve().parents[1]  # noqa: MI001
+    ver = get_pyproject_version(repo_root)
+    assert ver.startswith("v0.")
+
+    out_png = tmp_path / "splash.png"
+    generate_splash_png(
+        svg_path=tmp_path / "nonexistent.svg",
+        output_path=out_png,
+        version_str=ver,
+        subtitle="Unit Test Subtitle",
+    )
+    assert out_png.exists() and out_png.stat().st_size > 1000

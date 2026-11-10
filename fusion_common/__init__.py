@@ -38,6 +38,13 @@ from fusion_common.models import (
     MeasurementManifest,
     MeasurementRecord,
 )
+from fusion_common.splash import (
+    finish_startup_splash,
+    generate_splash_png,
+    get_pyproject_version,
+    render_splash_image,
+    show_startup_splash,
+)
 from fusion_common.thermometry import (
     DEFAULT_VR_COEFFICIENTS,
     DEFAULT_XA_COEFFICIENTS,
@@ -85,6 +92,9 @@ __all__ = [
     "centered_moving_average",
     "eval_polynomial_asc",
     "evaluate_channel_temperature",
+    "finish_startup_splash",
+    "generate_splash_png",
+    "get_pyproject_version",
     "load_fus",
     "load_fus_fmdt",
     "load_fus_mdt",
@@ -94,5 +104,7 @@ __all__ = [
     "make_vr_thermocouple",
     "make_xa_thermocouple",
     "migrate_manifest_dict",
+    "render_splash_image",
     "save_fus",
+    "show_startup_splash",
 ]
