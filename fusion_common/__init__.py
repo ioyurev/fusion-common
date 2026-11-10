@@ -2,6 +2,7 @@ from importlib.metadata import version
 
 from fusion_common.calibration import (
     AdditivePolynomialCalibration,
+    CalibrationManager,
     CalibrationSpec,
     CalibrationStats,
     DirectPolynomialCalibration,
@@ -13,6 +14,7 @@ from fusion_common.calibration import (
 )
 from fusion_common.formats import (
     ALL_SUPPORTED_FILTER,
+    FORMAT_LOADERS,
     FUS_EXT_FILTER,
     load_fus,
     load_fus_fmdt,
@@ -20,6 +22,7 @@ from fusion_common.formats import (
     load_measurement,
     load_tda,
     load_vtaz,
+    register_format_loader,
     save_fus,
 )
 from fusion_common.math_utils import (
@@ -37,6 +40,11 @@ from fusion_common.models import (
     ChannelDescriptor,
     MeasurementManifest,
     MeasurementRecord,
+)
+from fusion_common.packaging import (
+    get_appdata_path,
+    make_dist_zip,
+    write_pyinstaller_version_file,
 )
 from fusion_common.splash import (
     finish_startup_splash,
@@ -66,9 +74,11 @@ __all__ = [
     "CURRENT_SCHEMA_VERSION",
     "DEFAULT_VR_COEFFICIENTS",
     "DEFAULT_XA_COEFFICIENTS",
+    "FORMAT_LOADERS",
     "FUS_EXT_FILTER",
     "MIGRATIONS",
     "AdditivePolynomialCalibration",
+    "CalibrationManager",
     "CalibrationSpec",
     "CalibrationStats",
     "ChannelDescriptor",
@@ -94,6 +104,7 @@ __all__ = [
     "evaluate_channel_temperature",
     "finish_startup_splash",
     "generate_splash_png",
+    "get_appdata_path",
     "get_pyproject_version",
     "load_fus",
     "load_fus_fmdt",
@@ -101,10 +112,13 @@ __all__ = [
     "load_measurement",
     "load_tda",
     "load_vtaz",
+    "make_dist_zip",
     "make_vr_thermocouple",
     "make_xa_thermocouple",
     "migrate_manifest_dict",
+    "register_format_loader",
     "render_splash_image",
     "save_fus",
     "show_startup_splash",
+    "write_pyinstaller_version_file",
 ]

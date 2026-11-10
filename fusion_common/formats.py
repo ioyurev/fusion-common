@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+from collections.abc import Callable
 from io import StringIO, TextIOWrapper
 from pathlib import Path
 from typing import Literal
@@ -209,7 +210,7 @@ def load_vtaz(path: Path) -> MeasurementRecord:
 
 
 def load_tda(path: Path) -> MeasurementRecord:
-    """Читает архивные файлы VPTAnalyzer (.tda в кодировке cp1251) без использования pandas."""
+    """Читает архивные файлы VPTAnalyzer (.tda в кодировке cp1251)."""
     lines_raw = path.read_text(encoding="cp1251").splitlines(keepends=True)
     sample_name = ""
     operator = ""
@@ -282,7 +283,7 @@ def load_tda(path: Path) -> MeasurementRecord:
 
 
 def load_fus_mdt(path: Path) -> MeasurementRecord:
-    """Читает архивные файлы ДТА .fus-mdt (v1.0) без использования pandas."""
+    """Читает архивные файлы ДТА .fus-mdt (v1.0)."""
     with ZipFile(path, "r", ZIP_DEFLATED) as zipf:
         names = set(zipf.namelist())
         if "manifest.json" in names:
@@ -362,7 +363,7 @@ def load_fus_mdt(path: Path) -> MeasurementRecord:
 
 
 def load_fus_fmdt(path: Path) -> MeasurementRecord:
-    """Читает архивные отфильтрованные файлы .fus-fmdt (v1.0) без использования pandas."""
+    """Читает архивные отфильтрованные файлы .fus-fmdt (v1.0)."""
     with ZipFile(path, "r", ZIP_DEFLATED) as zipf:
         if "manifest.json" in zipf.namelist():
             return load_fus(path)
@@ -403,17 +404,31 @@ def load_fus_fmdt(path: Path) -> MeasurementRecord:
     )
 
 
+FormatLoader = Callable[[Path], MeasurementRecord]
+
+FORMAT_LOADERS: dict[str, FormatLoader] = {
+    ".tda": load_tda,
+    ".vtaz": load_vtaz,
+    ".fus-mdt": load_fus_mdt,
+    ".fus-fmdt": load_fus_fmdt,
+    ".fus": load_fus,
+}
+
+
+def register_format_loader(extension: str, loader: FormatLoader) -> None:
+    """Регистрирует загрузчик для нового файлового расширения без изменения диспетчера (OCP)."""
+    norm_ext = (
+        extension.lower()
+        if extension.startswith(".")
+        else f".{extension.lower()}"
+    )
+    FORMAT_LOADERS[norm_ext] = loader
+
+
 def load_measurement(path: Path) -> MeasurementRecord:
-    """Универсальная точка входа для загрузки любого поддерживаемого файла измерений."""
+    """Универсальная точка входа для загрузки любого зарегистрированного формата измерений."""
     suffix = path.suffix.lower()
-    if suffix == ".tda":
-        return load_tda(path)
-    if suffix == ".vtaz":
-        return load_vtaz(path)
-    if suffix == ".fus-mdt":
-        return load_fus_mdt(path)
-    if suffix == ".fus-fmdt":
-        return load_fus_fmdt(path)
-    if suffix == ".fus":
-        return load_fus(path)
-    raise ValueError(f"Неподдерживаемый формат файла измерения: {suffix}")
+    loader = FORMAT_LOADERS.get(suffix)
+    if loader is None:
+        raise ValueError(f"Неподдерживаемый формат файла измерения: {suffix}")
+    return loader(path)

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import json
 import math
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Annotated, Literal
 
 import numpy as np
+from loguru import logger as log
 from pydantic import BaseModel, Field, field_validator
 
 from fusion_common.thermometry import CjcData, SensorSpec
@@ -243,3 +246,58 @@ def evaluate_channel_temperature(
     if calibration is not None:
         val = calibration.apply(val)
     return val
+
+
+class CalibrationManager:
+    """Единый файловый менеджер калибровок температуры по стандартным образцам."""
+
+    def __init__(self, storage_dir: Path) -> None:
+        self.storage_dir = storage_dir
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        self.calibrations: dict[str, AdditivePolynomialCalibration] = {}
+        self.load_all()
+
+    def save_calibration(self, calibration: AdditivePolynomialCalibration) -> None:
+        safe_name = "".join(
+            ch if (ch.isalnum() or ch in (" ", "-", "_")) else "_"
+            for ch in calibration.name
+        ).strip()
+        path = self.storage_dir / f"{safe_name or 'calibration'}.json"
+        path.write_text(calibration.model_dump_json(indent=2), encoding="utf-8")
+        self.calibrations[calibration.name] = calibration
+
+    def load_calibration(self, name: str) -> AdditivePolynomialCalibration:
+        if name in self.calibrations:
+            return self.calibrations[name]
+        path = self.storage_dir / f"{name}.json"
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        cal = AdditivePolynomialCalibration.model_validate(raw)
+        self.calibrations[cal.name] = cal
+        return cal
+
+    def load_all(self) -> None:
+        self.calibrations.clear()
+        for path in sorted(self.storage_dir.glob("*.json")):
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                cal = AdditivePolynomialCalibration.model_validate(raw)
+                name = cal.name or path.stem
+                cal.name = name
+                self.calibrations[name] = cal
+            except (OSError, ValueError) as exc:
+                log.bind(path=str(path), error=str(exc)).warning(
+                    "Failed to load calibration profile"
+                )
+
+    def delete_calibration(self, name: str) -> None:
+        self.calibrations.pop(name, None)
+        for path in self.storage_dir.glob("*.json"):
+            try:
+                raw = json.loads(path.read_text(encoding="utf-8"))
+                if raw.get("name") == name or path.stem == name:
+                    path.unlink()
+            except (OSError, ValueError):
+                continue
+
+    def list_names(self) -> list[str]:
+        return list(self.calibrations.keys())

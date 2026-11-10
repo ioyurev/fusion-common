@@ -272,3 +272,36 @@ def test_splash_rendering_qimage(tmp_path: Path) -> None:
         subtitle="Unit Test Subtitle",
     )
     assert out_png.exists() and out_png.stat().st_size > 1000
+
+
+def test_calibration_manager_and_packaging_helpers(tmp_path: Path) -> None:
+    from fusion_common import (
+        CalibrationManager,
+        get_appdata_path,
+        write_pyinstaller_version_file,
+    )
+
+    cal_mgr = CalibrationManager(tmp_path / "cals")
+    cal = AdditivePolynomialCalibration.from_standards(
+        name="TestCal",
+        standards=[
+            Standard(name="In", t_theor=156.6, t_exp=155.0),
+            Standard(name="Sn", t_theor=231.9, t_exp=230.0),
+        ],
+    )
+    cal_mgr.save_calibration(cal)
+    assert "TestCal" in cal_mgr.list_names()
+    loaded_cal = cal_mgr.load_calibration("TestCal")
+    assert loaded_cal.name == "TestCal"
+    cal_mgr.delete_calibration("TestCal")
+    assert "TestCal" not in cal_mgr.list_names()
+
+    v_file = write_pyinstaller_version_file(
+        package_name="fusion-test",
+        product_name="Fusion Test",
+        file_description="Test Desc",
+        version_str="0.4.0",
+        output_path=tmp_path / "version_text_file",
+    )
+    assert v_file.exists()
+    assert get_appdata_path("fusion-test").exists()
