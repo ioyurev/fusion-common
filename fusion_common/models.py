@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import pandas as pd
 from pydantic import BaseModel, Field
 
 from fusion_common.calibration import CalibrationSpec
@@ -69,14 +68,48 @@ class MeasurementRecord:
                 return ch
         return None
 
-    def to_dataframe(self) -> pd.DataFrame:
-        df = pd.DataFrame()
-        ordered_cols = [
+    def ordered_columns(self) -> list[str]:
+        cols = [
             ch.column for ch in self.manifest.channels if ch.column in self.data
         ]
-        for col in ordered_cols:
-            df[col] = self.data[col]
-        for col, arr in self.data.items():
-            if col not in df.columns:
-                df[col] = arr
-        return df
+        for col in self.data:
+            if col not in cols:
+                cols.append(col)
+        return cols
+
+    def set_smoothed_channel(
+        self,
+        source_column: str,
+        smoothed_values: np.ndarray,
+        smoothing_window: int,
+        target_column: str = "dta_smoothed",
+        label: str = "ДТА (сглаж.)",
+    ) -> None:
+        """Неразрушающе добавляет или обновляет сглаженный канал внутри этой же записи."""
+        src_desc = self.get_descriptor(source_column)
+        unit = src_desc.unit if src_desc is not None else "mV"
+        exo_up = (
+            src_desc.metadata.get("exo_up", True)
+            if src_desc is not None
+            else True
+        )
+        meta: dict[str, Any] = {
+            "exo_up": exo_up,
+            "smoothing_window": int(smoothing_window),
+        }
+        new_desc = ChannelDescriptor(
+            column=target_column,
+            label=label,
+            unit=unit,
+            source_columns=[source_column],
+            metadata=meta,
+        )
+        replaced = False
+        for idx, ch in enumerate(self.manifest.channels):
+            if ch.column == target_column:
+                self.manifest.channels[idx] = new_desc
+                replaced = True
+                break
+        if not replaced:
+            self.manifest.channels.append(new_desc)
+        self.data[target_column] = np.asarray(smoothed_values, dtype=float)

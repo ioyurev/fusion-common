@@ -1,22 +1,20 @@
 [project]
 name = "fusion-common"
-version = "0.2.0"
+version = "0.3.0"
 description = "Общее ядро термометрии, калибровок и форматов файлов для пакетов термического анализа Fusion"
 authors = [{ name = "Ilya O. Yurev", email = "i.o.yurev@yandex.ru" }]
 license = { text = "GPL-3.0-or-later" }
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
     "loguru>=0.7.3",
-    "numpy>=1.26.2",
-    "pandas>=2.1.3",
+    "numpy>=2.2.0",
     "pydantic>=2.11.0",
 ]
 
 [dependency-groups]
 dev = [
     "mypy>=1.15.0",
-    "pandas-stubs>=2.1.1",
     "pre-commit>=4.2.0",
     "pytest>=9.0.0",
     "ruff>=0.11.0",

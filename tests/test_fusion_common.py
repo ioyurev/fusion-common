@@ -21,6 +21,7 @@ from fusion_common import (
     PolynomialSensorModel,
     Standard,
     ThermocoupleManager,
+    centered_moving_average,
     evaluate_channel_temperature,
     load_measurement,
     make_vr_thermocouple,
@@ -183,6 +184,24 @@ def test_multi_thermocouple_fus_roundtrip(tmp_path: Path) -> None:
     dta_desc = loaded.get_descriptor("dta_1_2")
     assert dta_desc is not None
     assert dta_desc.metadata.get("exo_up") is True
+
+    # Проверяем неразрушающее сохранение сглаженных данных в том же самом файле .fus
+    smoothed = centered_moving_average(dta_1_2, window=3)
+    loaded.set_smoothed_channel(
+        source_column="dta_1_2",
+        smoothed_values=smoothed,
+        smoothing_window=3,
+        target_column="dta_smoothed",
+    )
+    save_fus(loaded, fus_path)
+
+    reloaded = load_measurement(fus_path)
+    raw_ch = reloaded.get_channel("dta_1_2")
+    sm_ch = reloaded.get_channel("dta_smoothed")
+    sm_desc = reloaded.get_descriptor("dta_smoothed")
+    assert raw_ch is not None and np.allclose(raw_ch, dta_1_2)
+    assert sm_ch is not None and np.allclose(sm_ch, smoothed)
+    assert sm_desc is not None and sm_desc.metadata.get("smoothing_window") == 3
 
 
 def test_vtaz1_read_backward_compatibility(tmp_path: Path) -> None:

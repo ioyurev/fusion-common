@@ -1,4 +1,4 @@
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import version
 
 from fusion_common.calibration import (
     AdditivePolynomialCalibration,
@@ -25,6 +25,7 @@ from fusion_common.formats import (
 from fusion_common.math_utils import (
     bisection_method,
     calculate_speed,
+    centered_moving_average,
     eval_polynomial_asc,
 )
 from fusion_common.migration import (
@@ -51,10 +52,7 @@ from fusion_common.thermometry import (
     make_xa_thermocouple,
 )
 
-try:
-    __version__ = version("fusion-common")
-except PackageNotFoundError:
-    __version__ = "0.2.0"
+__version__: str = version("fusion-common")
 
 __all__ = [
     "ALL_SUPPORTED_FILTER",
@@ -84,6 +82,7 @@ __all__ = [
     "bisection_method",
     "calculate_coefficients",
     "calculate_speed",
+    "centered_moving_average",
     "eval_polynomial_asc",
     "evaluate_channel_temperature",
     "load_fus",

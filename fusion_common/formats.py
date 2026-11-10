@@ -9,7 +9,6 @@ from typing import Literal
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import numpy as np
-import pandas as pd
 
 from fusion_common.calibration import (
     AdditivePolynomialCalibration,
@@ -31,16 +30,46 @@ ALL_SUPPORTED_FILTER = (
 )
 
 
+def _serialize_csv(data: dict[str, np.ndarray], columns: list[str]) -> str:
+    buf = StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(columns)
+    if columns:
+        arrays = [data[col].tolist() for col in columns]
+        for row in zip(*arrays):
+            writer.writerow(row)
+    return buf.getvalue()
+
+
+def _parse_csv_columns(text_stream: io.TextIOBase) -> dict[str, np.ndarray]:
+    reader = csv.reader(text_stream)
+    header = next(reader, None)
+    if not header:
+        return {}
+    col_names = [col.strip() for col in header]
+    buckets: list[list[float]] = [[] for _ in col_names]
+    for row in reader:
+        if not row:
+            continue
+        for b_list, val_str in zip(buckets, row):
+            b_list.append(float(val_str.strip()))
+    return {
+        name: np.array(vals, dtype=float)
+        for name, vals in zip(col_names, buckets)
+    }
+
+
 def save_fus(record: MeasurementRecord, path: Path) -> None:
-    """Сохраняет измерение в единый расширяемый по OCP контейнер .fus (v1.0)."""
-    df = record.to_dataframe()
-    csv_buf = StringIO()
-    df.to_csv(csv_buf, index=False)
+    """Сохраняет измерение (включая сырые и сглаженные каналы) в контейнер .fus (v1.0)."""
+    cols = record.ordered_columns()
+    csv_text = _serialize_csv(record.data, cols)
     manifest_json = record.manifest.model_dump_json(indent=2)
 
     with ZipFile(path, "w", ZIP_DEFLATED) as zipf:
         zipf.writestr("manifest.json", manifest_json.encode("utf-8"))
-        zipf.writestr("data.csv", csv_buf.getvalue().encode("utf-8"))
+        zipf.writestr("data.csv", csv_text.encode("utf-8"))
+    record.source_path = path
+    record.source_format = "FUS"
 
 
 def load_fus(path: Path) -> MeasurementRecord:
@@ -50,8 +79,8 @@ def load_fus(path: Path) -> MeasurementRecord:
         migrated_dict = migrate_manifest_dict(raw_dict)
         manifest = MeasurementManifest.model_validate(migrated_dict)
         with zipf.open("data.csv", "r") as bf:
-            df = pd.read_csv(bf, sep=",", decimal=".")
-    data = {str(col): df[col].to_numpy(dtype=float) for col in df.columns}
+            text_f = TextIOWrapper(bf, encoding="utf-8")
+            data = _parse_csv_columns(text_f)
     return MeasurementRecord(
         manifest=manifest,
         data=data,
@@ -63,7 +92,11 @@ def load_fus(path: Path) -> MeasurementRecord:
 
 def _read_vtaz_csv(text_stream: io.TextIOBase) -> tuple[np.ndarray, np.ndarray]:
     content = text_stream.read()
-    lines = [line.removesuffix(";") for line in content.strip().splitlines() if line.strip()]
+    lines = [
+        line.removesuffix(";")
+        for line in content.strip().splitlines()
+        if line.strip()
+    ]
     reader = csv.reader(lines)
     next(reader, None)
     x_list: list[float] = []
@@ -176,7 +209,7 @@ def load_vtaz(path: Path) -> MeasurementRecord:
 
 
 def load_tda(path: Path) -> MeasurementRecord:
-    """Читает архивные файлы VPTAnalyzer (.tda в кодировке cp1251)."""
+    """Читает архивные файлы VPTAnalyzer (.tda в кодировке cp1251) без использования pandas."""
     lines_raw = path.read_text(encoding="cp1251").splitlines(keepends=True)
     sample_name = ""
     operator = ""
@@ -199,16 +232,17 @@ def load_tda(path: Path) -> MeasurementRecord:
             break
 
     lines_data = lines_raw[start_idx:-1] if start_idx < len(lines_raw) else []
-    df = pd.read_csv(
-        StringIO("".join(lines_data)),
-        sep=" ",
-        header=None,
-        usecols=[0, 1],
-        decimal=",",
-        names=["emf", "time_days"],
-    )
-    time_arr = (df["time_days"] * 86400.0).to_numpy(dtype=float)
-    emf_arr = df["emf"].to_numpy(dtype=float)
+    emf_list: list[float] = []
+    time_days_list: list[float] = []
+    for row_line in lines_data:
+        tokens = row_line.strip().split()
+        if len(tokens) >= 2:
+            e_tok, t_tok, *_ = tokens
+            emf_list.append(float(e_tok.replace(",", ".")))
+            time_days_list.append(float(t_tok.replace(",", ".")))
+
+    time_arr = np.array(time_days_list, dtype=float) * 86400.0
+    emf_arr = np.array(emf_list, dtype=float)
 
     channels: list[ChannelDescriptor] = [
         ChannelDescriptor(column="time", label="Время", unit="s"),
@@ -248,14 +282,15 @@ def load_tda(path: Path) -> MeasurementRecord:
 
 
 def load_fus_mdt(path: Path) -> MeasurementRecord:
-    """Читает архивные файлы ДТА .fus-mdt (v1.0) с игнорированием устаревшей чувствительности."""
+    """Читает архивные файлы ДТА .fus-mdt (v1.0) без использования pandas."""
     with ZipFile(path, "r", ZIP_DEFLATED) as zipf:
         names = set(zipf.namelist())
         if "manifest.json" in names:
             return load_fus(path)
         version_str = zipf.read("VERSION").decode("utf-8").strip()
         with zipf.open("data.csv", "r") as bf:
-            df = pd.read_csv(bf, sep=",", decimal=".")
+            text_f = TextIOWrapper(bf, encoding="utf-8")
+            cols = _parse_csv_columns(text_f)
 
         info_dict: dict[str, str] = {}
         if "info.json" in names:
@@ -270,11 +305,13 @@ def load_fus_mdt(path: Path) -> MeasurementRecord:
             with ZipFile(cal_bytes, "r") as cal_zip:
                 if "coeff_temp.csv" in cal_zip.namelist():
                     arr = np.loadtxt(cal_zip.open("coeff_temp.csv"), dtype=float)
-                    cal_temp_coeffs = [float(v) for v in np.atleast_1d(arr).tolist()]
+                    cal_temp_coeffs = [
+                        float(v) for v in np.atleast_1d(arr).tolist()
+                    ]
 
-    time_arr = df["Time/s"].to_numpy(dtype=float)
-    t1_arr = df["T1/mV"].to_numpy(dtype=float)
-    t2_arr = df["T2/mV"].to_numpy(dtype=float)
+    time_arr = cols["Time/s"]
+    t1_arr = cols["T1/mV"]
+    t2_arr = cols["T2/mV"]
     dta_arr = t1_arr - t2_arr
 
     channels: list[ChannelDescriptor] = [
@@ -325,18 +362,18 @@ def load_fus_mdt(path: Path) -> MeasurementRecord:
 
 
 def load_fus_fmdt(path: Path) -> MeasurementRecord:
-    """Читает архивные отфильтрованные файлы .fus-fmdt (v1.0)."""
+    """Читает архивные отфильтрованные файлы .fus-fmdt (v1.0) без использования pandas."""
     with ZipFile(path, "r", ZIP_DEFLATED) as zipf:
         if "manifest.json" in zipf.namelist():
             return load_fus(path)
         version_str = zipf.read("VERSION").decode("utf-8").strip()
         with zipf.open("data.csv", "r") as bf:
-            df = pd.read_csv(bf, sep=",", decimal=".")
+            text_f = TextIOWrapper(bf, encoding="utf-8")
+            cols = _parse_csv_columns(text_f)
 
     channels: list[ChannelDescriptor] = []
     data_map: dict[str, np.ndarray] = {}
-    for col in df.columns:
-        col_str = str(col)
+    for col_str, arr in cols.items():
         if "/" in col_str:
             name_part, unit_part = col_str.split("/", maxsplit=1)  # noqa: PU001
         else:
@@ -355,7 +392,7 @@ def load_fus_fmdt(path: Path) -> MeasurementRecord:
                 metadata=meta,
             )
         )
-        data_map[norm_key] = df[col].to_numpy(dtype=float)
+        data_map[norm_key] = arr
 
     return MeasurementRecord(
         manifest=MeasurementManifest(channels=channels),
