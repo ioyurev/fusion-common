@@ -65,6 +65,7 @@ from fusion_common.thermometry import (
     PolynomialSensorModel,
     SensorSpec,
     ThermocoupleManager,
+    make_gost_thermocouples,
     make_vr_thermocouple,
     make_xa_thermocouple,
 )
@@ -116,6 +117,7 @@ __all__ = [
     "load_tda",
     "load_vtaz",
     "make_dist_zip",
+    "make_gost_thermocouples",
     "make_vr_thermocouple",
     "make_xa_thermocouple",
     "migrate_manifest_dict",

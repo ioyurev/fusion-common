@@ -63,9 +63,29 @@ def test_piecewise_and_lookup_sensors() -> None:
     assert lut.temperature_to_emf(375.0) == pytest.approx(15.0)
 
 
-def test_thermocouple_manager_crud(tmp_path: Path) -> None:
+def test_thermocouple_manager_crud_and_gost_reference_points(tmp_path: Path) -> None:
+    from fusion_common import make_gost_thermocouples
+
     mgr = ThermocoupleManager(tmp_path / "tc")
-    assert len(mgr.list_names()) == 2
+    assert len(mgr.list_names()) == 12
+    assert len(make_gost_thermocouples()) == 12
+
+    # Контрольные точки ТХА (тип K) во всех трёх поддиапазонах ГОСТ Р 8.585-2001:
+    # -100 °C -> -3.554 мВ; 200 °C -> 8.138 мВ; 500 °C -> 20.644 мВ;
+    # 1000 °C -> 41.276 мВ; 1300 °C -> 52.410 мВ
+    xa = make_xa_thermocouple()
+    assert float(xa.emf_to_temperature(-3.554)) == pytest.approx(-100.0, abs=0.1)
+    assert float(xa.emf_to_temperature(8.138)) == pytest.approx(200.0, abs=0.1)
+    assert float(xa.emf_to_temperature(20.644)) == pytest.approx(500.0, abs=0.1)
+    assert float(xa.emf_to_temperature(41.276)) == pytest.approx(1000.0, abs=0.1)
+    assert float(xa.emf_to_temperature(52.410)) == pytest.approx(1300.0, abs=0.1)
+
+    # Контрольные точки ТВР (тип А-1) по ГОСТ Р 8.585-2001:
+    # 1000 °C -> 16.129 мВ; 2000 °C -> 29.186 мВ; 2500 °C -> 33.640 мВ
+    vr = make_vr_thermocouple()
+    assert float(vr.emf_to_temperature(16.129)) == pytest.approx(1000.0, abs=0.5)
+    assert float(vr.emf_to_temperature(29.186)) == pytest.approx(2000.0, abs=0.6)
+    assert float(vr.emf_to_temperature(33.640)) == pytest.approx(2500.0, abs=1.0)
 
     custom = PolynomialSensorModel(
         name="Custom_Type_S",

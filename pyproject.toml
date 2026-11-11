@@ -1,6 +1,6 @@
 [project]
 name = "fusion-common"
-version = "0.4.1"
+version = "0.4.2"
 description = "Общее ядро термометрии, калибровок, форматов файлов и сплэш-экрана для пакетов Fusion"
 authors = [{ name = "Ilya O. Yurev", email = "i.o.yurev@yandex.ru" }]
 license = { text = "GPL-3.0-or-later" }
