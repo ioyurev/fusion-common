@@ -16,6 +16,7 @@ from fusion_common.formats import (
     ALL_SUPPORTED_FILTER,
     FORMAT_LOADERS,
     FUS_EXT_FILTER,
+    FUSA_EXT_FILTER,
     load_fus,
     load_fus_fmdt,
     load_fus_mdt,
@@ -24,6 +25,7 @@ from fusion_common.formats import (
     load_vtaz,
     register_format_loader,
     save_fus,
+    save_fusa,
 )
 from fusion_common.math_utils import (
     bisection_method,
@@ -75,6 +77,7 @@ __all__ = [
     "DEFAULT_VR_COEFFICIENTS",
     "DEFAULT_XA_COEFFICIENTS",
     "FORMAT_LOADERS",
+    "FUSA_EXT_FILTER",
     "FUS_EXT_FILTER",
     "MIGRATIONS",
     "AdditivePolynomialCalibration",
@@ -119,6 +122,7 @@ __all__ = [
     "register_format_loader",
     "render_splash_image",
     "save_fus",
+    "save_fusa",
     "show_startup_splash",
     "write_pyinstaller_version_file",
 ]

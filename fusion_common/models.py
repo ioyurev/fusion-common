@@ -26,7 +26,7 @@ class ChannelDescriptor(BaseModel):
 
 
 class MeasurementManifest(BaseModel):
-    """Манифест единого контейнера измерения .fus без привязки к фиксированной модальности."""
+    """Манифест контейнера измерения (.fus) и проекта анализа (.fusa)."""
 
     schema_version: str = "1.0"
     sample: str = ""
@@ -34,6 +34,7 @@ class MeasurementManifest(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     comment: str = ""
     channels: list[ChannelDescriptor] = Field(default_factory=list)
+    analysis_state: dict[str, Any] = Field(default_factory=dict)
 
 
 @dataclass
@@ -82,9 +83,19 @@ class MeasurementRecord:
         source_column: str,
         smoothed_values: np.ndarray,
         smoothing_window: int,
-        target_column: str = "dta_smoothed",
-        label: str = "ДТА (сглаж.)",
+        target_column: str | None = None,
+        label: str | None = None,
     ) -> None:
+        if target_column is None:
+            target_column = (
+                "dta_smoothed"
+                if source_column == "dta"
+                else f"{source_column}__smoothed"
+            )
+        src_desc = self.get_descriptor(source_column)
+        base_label = src_desc.label if src_desc is not None else source_column
+        if label is None:
+            label = f"{base_label} (сглаж.)"
         """Неразрушающе добавляет или обновляет сглаженный канал внутри этой же записи."""
         src_desc = self.get_descriptor(source_column)
         unit = src_desc.unit if src_desc is not None else "mV"

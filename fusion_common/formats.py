@@ -25,9 +25,10 @@ from fusion_common.models import (
 )
 from fusion_common.thermometry import CjcData, PolynomialSensorModel
 
-FUS_EXT_FILTER = "Файлы измерений Fusion (*.fus)"
+FUS_EXT_FILTER = "Файлы сырых измерений Fusion (*.fus)"
+FUSA_EXT_FILTER = "Файлы анализа Fusion (*.fusa)"
 ALL_SUPPORTED_FILTER = (
-    "Все поддерживаемые измерения (*.fus *.vtaz *.tda *.fus-mdt *.fus-fmdt)"
+    "Все поддерживаемые файлы (*.fus *.fusa *.vtaz *.tda *.fus-mdt *.fus-fmdt)"
 )
 
 
@@ -61,7 +62,7 @@ def _parse_csv_columns(text_stream: io.TextIOBase) -> dict[str, np.ndarray]:
 
 
 def save_fus(record: MeasurementRecord, path: Path) -> None:
-    """Сохраняет измерение (включая сырые и сглаженные каналы) в контейнер .fus (v1.0)."""
+    """Сохраняет измерение в контейнер .fus (или проект анализа в .fusa)."""
     cols = record.ordered_columns()
     csv_text = _serialize_csv(record.data, cols)
     manifest_json = record.manifest.model_dump_json(indent=2)
@@ -70,7 +71,16 @@ def save_fus(record: MeasurementRecord, path: Path) -> None:
         zipf.writestr("manifest.json", manifest_json.encode("utf-8"))
         zipf.writestr("data.csv", csv_text.encode("utf-8"))
     record.source_path = path
-    record.source_format = "FUS"
+    record.source_format = (
+        "FUSA" if path.suffix.lower() == ".fusa" else "FUS"
+    )
+
+
+def save_fusa(record: MeasurementRecord, path: Path) -> Path:
+    """Сохраняет результаты анализа в отдельный файл .fusa без перезаписи сырого файла."""
+    target = path if path.suffix.lower() == ".fusa" else path.with_suffix(".fusa")
+    save_fus(record, target)
+    return target
 
 
 def load_fus(path: Path) -> MeasurementRecord:
@@ -412,6 +422,7 @@ FORMAT_LOADERS: dict[str, FormatLoader] = {
     ".fus-mdt": load_fus_mdt,
     ".fus-fmdt": load_fus_fmdt,
     ".fus": load_fus,
+    ".fusa": load_fus,
 }
 
 

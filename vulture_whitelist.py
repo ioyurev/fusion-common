@@ -3,6 +3,7 @@
 from fusion_common import (
     CURRENT_SCHEMA_VERSION,
     FORMAT_LOADERS,
+    FUSA_EXT_FILTER,
     MIGRATIONS,
     AdditivePolynomialCalibration,
     CalibrationManager,
@@ -43,6 +44,7 @@ from fusion_common import (
     register_format_loader,
     render_splash_image,
     save_fus,
+    save_fusa,
     show_startup_splash,
     write_pyinstaller_version_file,
 )
@@ -52,6 +54,7 @@ from fusion_common.splash import main_cli
 _PUBLIC_API = (
     CURRENT_SCHEMA_VERSION,
     FORMAT_LOADERS,
+    FUSA_EXT_FILTER,
     MIGRATIONS,
     AdditivePolynomialCalibration,
     AdditivePolynomialCalibration.kind,
@@ -83,6 +86,7 @@ _PUBLIC_API = (
     LookupSplineSensorModel,
     LookupSplineSensorModel.kind,
     MeasurementManifest,
+    MeasurementManifest.analysis_state,
     MeasurementManifest.created_at,
     MeasurementManifest.comment,
     MeasurementRecord,
@@ -129,6 +133,7 @@ _PUBLIC_API = (
     register_format_loader,
     render_splash_image,
     save_fus,
+    save_fusa,
     show_startup_splash,
     write_pyinstaller_version_file,
 )
