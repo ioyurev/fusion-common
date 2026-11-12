@@ -91,6 +91,7 @@ _PUBLIC_API = (
     REFERENCE_STANDARDS,
     MeasurementManifest,
     MeasurementManifest.analysis_state,
+    MeasurementManifest.instrument,
     MeasurementManifest.sample_mass_mg,
     MeasurementManifest.crucible,
     MeasurementManifest.atmosphere,

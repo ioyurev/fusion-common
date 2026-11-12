@@ -31,6 +31,7 @@ class MeasurementManifest(BaseModel):
     schema_version: str = "1.0"
     sample: str = ""
     operator: str = ""
+    instrument: str = ""
     sample_mass_mg: float | None = None
     crucible: str = ""
     atmosphere: str = ""
