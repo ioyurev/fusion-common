@@ -102,6 +102,10 @@ def test_thermocouple_manager_crud_and_gost_reference_points(tmp_path: Path) -> 
 
 
 def test_calibration_models_and_statistics() -> None:
+    from fusion_common import REFERENCE_STANDARDS
+
+    assert REFERENCE_STANDARDS["In (Индий)"] == pytest.approx(156.6)
+    assert REFERENCE_STANDARDS["Au (Золото)"] == pytest.approx(1064.2)
     standards = [
         Standard(name="In", t_theor=156.6, t_exp=155.6),
         Standard(name="Sn", t_theor=231.9, t_exp=229.9),

@@ -1,6 +1,7 @@
 from importlib.metadata import version
 
 from fusion_common.calibration import (
+    REFERENCE_STANDARDS,
     AdditivePolynomialCalibration,
     CalibrationManager,
     CalibrationSpec,
@@ -81,6 +82,7 @@ __all__ = [
     "FUSA_EXT_FILTER",
     "FUS_EXT_FILTER",
     "MIGRATIONS",
+    "REFERENCE_STANDARDS",
     "AdditivePolynomialCalibration",
     "CalibrationManager",
     "CalibrationSpec",

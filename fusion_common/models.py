@@ -26,11 +26,15 @@ class ChannelDescriptor(BaseModel):
 
 
 class MeasurementManifest(BaseModel):
-    """Манифест контейнера измерения (.fus) и проекта анализа (.fusa)."""
+    """Манифест контейнера измерения (.fus) и проекта анализа (.fusa) с паспортом SCRAM/ICTAC."""
 
     schema_version: str = "1.0"
     sample: str = ""
     operator: str = ""
+    sample_mass_mg: float | None = None
+    crucible: str = ""
+    atmosphere: str = ""
+    reference_material: str = ""
     created_at: datetime = Field(default_factory=datetime.now)
     comment: str = ""
     channels: list[ChannelDescriptor] = Field(default_factory=list)
@@ -86,6 +90,7 @@ class MeasurementRecord:
         target_column: str | None = None,
         label: str | None = None,
     ) -> None:
+        """Неразрушающе добавляет или обновляет сглаженный канал внутри этой же записи."""
         if target_column is None:
             target_column = (
                 "dta_smoothed"
@@ -96,8 +101,6 @@ class MeasurementRecord:
         base_label = src_desc.label if src_desc is not None else source_column
         if label is None:
             label = f"{base_label} (сглаж.)"
-        """Неразрушающе добавляет или обновляет сглаженный канал внутри этой же записи."""
-        src_desc = self.get_descriptor(source_column)
         unit = src_desc.unit if src_desc is not None else "mV"
         exo_up = (
             src_desc.metadata.get("exo_up", True)

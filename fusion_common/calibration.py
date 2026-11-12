@@ -12,6 +12,26 @@ from pydantic import BaseModel, Field, field_validator
 
 from fusion_common.thermometry import CjcData, SensorSpec
 
+# Справочник стандартных реперных веществ МТШ-90 / ICTAC (Haines et al., Table 3 & 4)
+REFERENCE_STANDARDS: dict[str, float] = {
+    "H2O (Вода, плавление)": 0.0,
+    "Benzoic acid (Бензойная кислота)": 122.9,
+    "In (Индий)": 156.6,
+    "Sn (Олово)": 231.9,
+    "Bi (Висмут)": 271.4,
+    "Zn (Цинк)": 419.5,
+    "SiO2 (Кварц α→β)": 573.0,
+    "K2SO4 (Сульфат калия)": 583.0,
+    "Al (Алюминий)": 660.3,
+    "Ag (Серебро)": 961.8,
+    "Au (Золото)": 1064.2,
+    "Cu (Медь)": 1084.6,
+    "Ni (Никель)": 1455.0,
+    "Pd (Палладий)": 1554.9,
+    "Pt (Платина)": 1768.2,
+    "Al2O3 (Корунд)": 2054.0,
+}
+
 
 class Standard(BaseModel):
     """Реперная точка калибровки по стандартному веществу."""
