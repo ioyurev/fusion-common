@@ -104,8 +104,9 @@ def test_thermocouple_manager_crud_and_gost_reference_points(tmp_path: Path) -> 
 def test_calibration_models_and_statistics() -> None:
     from fusion_common import REFERENCE_STANDARDS
 
-    assert REFERENCE_STANDARDS["In (Индий)"] == pytest.approx(156.6)
-    assert REFERENCE_STANDARDS["Au (Золото)"] == pytest.approx(1064.2)
+    assert REFERENCE_STANDARDS["In (Индий, плавление)"] == pytest.approx(156.61)
+    assert REFERENCE_STANDARDS["Au (Золото, плавление)"] == pytest.approx(1064.18)
+    assert "SiO2 (Кварц α→β)" not in REFERENCE_STANDARDS
     standards = [
         Standard(name="In", t_theor=156.6, t_exp=155.6),
         Standard(name="Sn", t_theor=231.9, t_exp=229.9),
@@ -120,6 +121,21 @@ def test_calibration_models_and_statistics() -> None:
     assert stats.n_points == 3
     assert stats.sec is not None
     assert stats.expanded_uncertainty == pytest.approx(2.0 * stats.sec)
+
+    pw_cal = AdditivePolynomialCalibration.from_standards(
+        name="DTA_PW",
+        standards=standards,
+        calibration_type="piecewise",
+    )
+    assert float(pw_cal.apply(155.6)) == pytest.approx(156.6)
+    assert pw_cal.valid_temp_range == pytest.approx((155.6, 416.5))
+
+    off_cal = AdditivePolynomialCalibration.from_standards(
+        name="OnePoint",
+        standards=[Standard(name="In", t_theor=156.6, t_exp=155.6)],
+        calibration_type="offset",
+    )
+    assert float(off_cal.apply(200.0)) == pytest.approx(201.0)
 
     zero = IdentityCalibration()
     assert float(zero.apply(500.0)) == 500.0

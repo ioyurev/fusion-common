@@ -12,25 +12,39 @@ from pydantic import BaseModel, Field, field_validator
 
 from fusion_common.thermometry import CjcData, SensorSpec
 
-# Справочник стандартных реперных веществ МТШ-90 / ICTAC (Haines et al., Table 3 & 4)
+# Справочник сертифицированных реперных веществ МТШ-90 / LGC / NIST / ICTAC
+# (Richardson & Charsley, 1998, Tables 1, 3, 4; кварц SiO2 исключён по решению ICTAC)
 REFERENCE_STANDARDS: dict[str, float] = {
+    "Hg (Ртуть, плавление)": -38.86,
     "H2O (Вода, плавление)": 0.0,
-    "Benzoic acid (Бензойная кислота)": 122.9,
-    "In (Индий)": 156.6,
-    "Sn (Олово)": 231.9,
-    "Bi (Висмут)": 271.4,
-    "Zn (Цинк)": 419.5,
-    "SiO2 (Кварц α→β)": 573.0,
-    "K2SO4 (Сульфат калия)": 583.0,
-    "Al (Алюминий)": 660.3,
-    "Ag (Серебро)": 961.8,
-    "Au (Золото)": 1064.2,
-    "Cu (Медь)": 1084.6,
-    "Ni (Никель)": 1455.0,
-    "Pd (Палладий)": 1554.9,
-    "Pt (Платина)": 1768.2,
-    "Al2O3 (Корунд)": 2054.0,
+    "Ga (Галлий, плавление)": 29.76,
+    "Benzoic acid (Бензойная кислота)": 122.35,
+    "KNO3 (Нитрат калия, переход)": 128.85,
+    "In (Индий, плавление)": 156.61,
+    "Sn (Олово, плавление)": 231.92,
+    "Bi (Висмут, плавление)": 271.40,
+    "KClO4 (Перхлорат калия, переход)": 299.95,
+    "Pb (Свинец, плавление)": 327.47,
+    "Zn (Цинк, плавление)": 419.53,
+    "Al-Cu (Эвтектика Cu/66.9%Al)": 548.16,
+    "K2SO4 (Сульфат калия, переход)": 583.85,
+    "Al (Алюминий, плавление)": 660.33,
+    "K2CrO4 (Хромат калия, переход)": 669.15,
+    "Ag-Cu (Эвтектика Cu/71.9%Ag)": 779.91,
+    "BaCO3 (Карбонат бария, переход)": 808.85,
+    "SrCO3 (Карбонат стронция, переход)": 932.75,
+    "Ag (Серебро, плавление)": 961.78,
+    "Au (Золото, плавление)": 1064.18,
+    "K2SO4 (Сульфат калия, плавление)": 1069.85,
+    "Cu (Медь, плавление)": 1084.62,
+    "Ni (Никель, плавление)": 1455.0,
+    "Fe (Железо, плавление)": 1538.0,
+    "Pd (Палладий, плавление)": 1554.9,
+    "Pt (Платина, плавление)": 1768.2,
+    "Al2O3 (Корунд, плавление)": 2054.0,
 }
+
+CalibrationKind = Literal["offset", "linear", "quadratic", "piecewise"]
 
 
 class Standard(BaseModel):
@@ -62,23 +76,31 @@ def calculate_coefficients(
     calibration_type: str = "linear",
 ) -> list[float]:
     """Рассчитывает коэффициенты [a, b, c] аддитивной поправки delta_T(T_exp)."""
-    if calibration_type not in ("linear", "quadratic"):
-        raise ValueError("Тип калибровки должен быть 'linear' или 'quadratic'")
+    if calibration_type not in ("offset", "linear", "quadratic", "piecewise"):
+        raise ValueError(
+            "Тип калибровки должен быть 'offset', 'linear', 'quadratic' или 'piecewise'"
+        )
 
-    min_points = 2 if calibration_type == "linear" else 3
+    min_points = (
+        1
+        if calibration_type == "offset"
+        else (3 if calibration_type == "quadratic" else 2)
+    )
     if len(standards) < min_points:
         raise ValueError(
             f"Для расчёта {calibration_type} калибровки требуется минимум {min_points} стандарта"
         )
 
     t_exp = np.array([s.t_exp for s in standards], dtype=float)
-    if len(np.unique(t_exp)) < min_points:
+    if min_points > 1 and len(np.unique(t_exp)) < min_points:
         raise ValueError(
-            f"Для расчёта {calibration_type} калибровки требуется минимум {min_points} стандарта с различными экспериментальными температурами"
+            f"Для расчёта {calibration_type} калибровки требуется минимум {min_points} стандарта с различными температурами"
         )
 
     delta_t = np.array([s.t_theor - s.t_exp for s in standards], dtype=float)
-    if calibration_type == "linear":
+    if calibration_type == "offset":
+        return [0.0, float(np.mean(delta_t)), 0.0]
+    if calibration_type in ("linear", "piecewise"):
         c_a, c_b = np.polyfit(t_exp, delta_t, 1)  # noqa: PU001
         return [float(c_a), float(c_b), 0.0]
 
@@ -106,7 +128,7 @@ class AdditivePolynomialCalibration(BaseModel):
     """Аддитивная калибровка температуры по реперным веществам: T_corr = T_exp + delta_T(T_exp)."""
 
     kind: Literal["additive_polynomial"] = "additive_polynomial"
-    calibration_type: Literal["linear", "quadratic"] = "linear"
+    calibration_type: CalibrationKind = "linear"
     coefficients: list[float] = Field(default_factory=lambda: [0.0, 0.0, 0.0])
     name: str = ""
     description: str = ""
@@ -130,7 +152,7 @@ class AdditivePolynomialCalibration(BaseModel):
         cls,
         name: str,
         standards: Sequence[Standard],
-        calibration_type: Literal["linear", "quadratic"] = "linear",
+        calibration_type: CalibrationKind = "linear",
         description: str = "",
     ) -> AdditivePolynomialCalibration:
         coeffs = calculate_coefficients(standards, calibration_type)
@@ -142,14 +164,32 @@ class AdditivePolynomialCalibration(BaseModel):
             standards=list(standards),
         )
 
+    @property
+    def valid_temp_range(self) -> tuple[float, float] | None:
+        if not self.standards:
+            return None
+        exps = [s.t_exp for s in self.standards]
+        return float(min(exps)), float(max(exps))
+
     def _poly_desc(self) -> list[float]:
         c0, c1, c2, *_ = self.coefficients
-        if self.calibration_type == "linear":
+        if self.calibration_type in ("offset", "linear", "piecewise"):
             return [c0, c1]
         return [c0, c1, c2]
 
+    def _eval_delta(self, t_exp: float | np.ndarray) -> float | np.ndarray:
+        if self.calibration_type == "piecewise" and len(self.standards) >= 2:
+            order = np.argsort([s.t_exp for s in self.standards])
+            x_pts = np.array([self.standards[i].t_exp for i in order], dtype=float)
+            y_pts = np.array(
+                [self.standards[i].t_theor - self.standards[i].t_exp for i in order],
+                dtype=float,
+            )
+            return np.interp(t_exp, x_pts, y_pts)
+        return np.polyval(self._poly_desc(), t_exp)
+
     def apply(self, t_exp: float | np.ndarray) -> float | np.ndarray:
-        delta_t = np.polyval(self._poly_desc(), t_exp)
+        delta_t = self._eval_delta(t_exp)
         res = t_exp + delta_t
         if isinstance(t_exp, (int, float)):
             return float(res)
@@ -157,12 +197,20 @@ class AdditivePolynomialCalibration(BaseModel):
 
     def to_formula_str(self) -> str:
         c0, c1, c2, *_ = self.coefficients
+        if self.calibration_type == "offset":
+            return f"Tскор = Tэксп + ({c1:.3f}) °C"
+        if self.calibration_type == "piecewise":
+            return f"Tскор = Tэксп + ΔT_кусочн ({len(self.standards)} реперов)"
         if self.calibration_type == "linear":
             return f"Tскор = Tэксп + ({c0:.3f}) * Tэксп + ({c1:.3f})"
         return f"Tскор = Tэксп + ({c0:.3f}) * Tэксп² + ({c1:.3f}) * Tэксп + ({c2:.3f})"
 
     def calculate_statistics(self) -> CalibrationStats:
-        min_points = 2 if self.calibration_type == "linear" else 3
+        min_points = (
+            1
+            if self.calibration_type == "offset"
+            else (3 if self.calibration_type == "quadratic" else 2)
+        )
         if len(self.standards) < min_points:
             raise ValueError(
                 f"Для расчёта статистики требуется минимум {min_points} стандарта"
@@ -170,7 +218,7 @@ class AdditivePolynomialCalibration(BaseModel):
         t_exp = np.array([s.t_exp for s in self.standards], dtype=float)
         t_theor = np.array([s.t_theor for s in self.standards], dtype=float)
         delta_t_actual = t_theor - t_exp
-        delta_t_fit = np.asarray(np.polyval(self._poly_desc(), t_exp), dtype=float)
+        delta_t_fit = np.asarray(self._eval_delta(t_exp), dtype=float)
         residuals = delta_t_actual - delta_t_fit
 
         ss_res = float(np.sum(residuals**2))
@@ -178,7 +226,11 @@ class AdditivePolynomialCalibration(BaseModel):
         ss_tot = float(np.sum((delta_t_actual - delta_mean) ** 2))
 
         n = len(self.standards)
-        p = 2 if self.calibration_type == "linear" else 3
+        p = (
+            1
+            if self.calibration_type == "offset"
+            else (3 if self.calibration_type == "quadratic" else 2)
+        )
         if n > p:
             sec_val = float(np.sqrt(ss_res / (n - p)))
             sec: float | None = sec_val

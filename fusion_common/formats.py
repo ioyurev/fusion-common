@@ -145,8 +145,10 @@ def load_vtaz(path: Path) -> MeasurementRecord:
         if ver_num >= 1.0:
             cal_raw = json.loads(zipf.read("calibration.json").decode("utf-8"))
             cal_type_raw = cal_raw.get("calibration_type", "linear")
-            cal_type: Literal["linear", "quadratic"] = (
-                "quadratic" if cal_type_raw == "quadratic" else "linear"
+            cal_type: Literal["offset", "linear", "quadratic", "piecewise"] = (
+                cal_type_raw
+                if cal_type_raw in ("offset", "linear", "quadratic", "piecewise")
+                else "linear"
             )
             standards = [
                 Standard.model_validate(s) for s in cal_raw.get("standards", [])

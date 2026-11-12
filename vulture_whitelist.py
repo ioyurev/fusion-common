@@ -64,6 +64,7 @@ _PUBLIC_API = (
     AdditivePolynomialCalibration.from_standards,
     AdditivePolynomialCalibration.calculate_statistics,
     AdditivePolynomialCalibration.to_formula_str,
+    AdditivePolynomialCalibration.valid_temp_range,
     CalibrationManager,
     CalibrationManager.save_calibration,
     CalibrationManager.load_calibration,
