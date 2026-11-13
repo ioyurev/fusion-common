@@ -264,7 +264,9 @@ def test_vtaz1_read_backward_compatibility(tmp_path: Path) -> None:
             "metadata.json",
             json.dumps({"sample": "Pt", "operator": "Tester", "vtaz_version": "1.0"}),
         )
-        zipf.writestr("data_input.csv", "time, s,EMF, mV;\n0.0,1.0;\n1.0,2.0;\n2.0,3.0;\n")
+        zipf.writestr(
+            "data_input.csv", "time, s,EMF, mV;\n0.0,1.0;\n1.0,2.0;\n2.0,3.0;\n"
+        )
         zipf.writestr("calibration.json", cal.model_dump_json())
         zipf.writestr(
             "thermocouple.json",

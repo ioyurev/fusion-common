@@ -54,6 +54,7 @@ from fusion_common.splash import (
     generate_splash_png,
     get_pyproject_version,
     render_splash_image,
+    render_svg_pixmap,
     show_startup_splash,
 )
 from fusion_common.thermometry import (
@@ -125,6 +126,7 @@ __all__ = [
     "migrate_manifest_dict",
     "register_format_loader",
     "render_splash_image",
+    "render_svg_pixmap",
     "save_fus",
     "save_fusa",
     "show_startup_splash",

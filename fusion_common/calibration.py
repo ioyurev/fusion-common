@@ -298,7 +298,10 @@ class LookupSplineCalibration(BaseModel):
 
 
 CalibrationSpec = Annotated[
-    IdentityCalibration | AdditivePolynomialCalibration | DirectPolynomialCalibration | LookupSplineCalibration,
+    IdentityCalibration
+    | AdditivePolynomialCalibration
+    | DirectPolynomialCalibration
+    | LookupSplineCalibration,
     Field(discriminator="kind"),
 ]
 
@@ -310,9 +313,7 @@ def evaluate_channel_temperature(
     calibration: CalibrationSpec | None = None,
 ) -> float | np.ndarray:
     """Единый по-канальный конвейер пересчёта: сырая ЭДС -> компенсация CJC -> датчик -> калибровка."""
-    val: float | np.ndarray = (
-        cjc.compensate(emf_mv) if cjc is not None else emf_mv
-    )
+    val: float | np.ndarray = cjc.compensate(emf_mv) if cjc is not None else emf_mv
     if sensor is not None:
         val = sensor.emf_to_temperature(val)
     if calibration is not None:

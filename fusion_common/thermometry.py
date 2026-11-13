@@ -638,8 +638,7 @@ class ThermocoupleManager:
 
     def save_sensor(self, sensor: SensorSpec) -> None:
         safe_stem = "".join(
-            ch if (ch.isalnum() or ch in (" ", "-", "_")) else "_"
-            for ch in sensor.name
+            ch if (ch.isalnum() or ch in (" ", "-", "_")) else "_" for ch in sensor.name
         ).strip()
         path = self.storage_dir / f"{safe_stem or 'sensor'}.json"
         path.write_text(sensor.model_dump_json(indent=2), encoding="utf-8")

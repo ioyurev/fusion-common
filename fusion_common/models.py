@@ -75,9 +75,7 @@ class MeasurementRecord:
         return None
 
     def ordered_columns(self) -> list[str]:
-        cols = [
-            ch.column for ch in self.manifest.channels if ch.column in self.data
-        ]
+        cols = [ch.column for ch in self.manifest.channels if ch.column in self.data]
         for col in self.data:
             if col not in cols:
                 cols.append(col)
@@ -103,11 +101,7 @@ class MeasurementRecord:
         if label is None:
             label = f"{base_label} (сглаж.)"
         unit = src_desc.unit if src_desc is not None else "mV"
-        exo_up = (
-            src_desc.metadata.get("exo_up", True)
-            if src_desc is not None
-            else True
-        )
+        exo_up = src_desc.metadata.get("exo_up", True) if src_desc is not None else True
         meta: dict[str, Any] = {
             "exo_up": exo_up,
             "smoothing_window": int(smoothing_window),

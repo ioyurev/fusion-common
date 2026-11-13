@@ -55,10 +55,7 @@ def _parse_csv_columns(text_stream: io.TextIOBase) -> dict[str, np.ndarray]:
             continue
         for b_list, val_str in zip(buckets, row):
             b_list.append(float(val_str.strip()))
-    return {
-        name: np.array(vals, dtype=float)
-        for name, vals in zip(col_names, buckets)
-    }
+    return {name: np.array(vals, dtype=float) for name, vals in zip(col_names, buckets)}
 
 
 def save_fus(record: MeasurementRecord, path: Path) -> None:
@@ -71,9 +68,7 @@ def save_fus(record: MeasurementRecord, path: Path) -> None:
         zipf.writestr("manifest.json", manifest_json.encode("utf-8"))
         zipf.writestr("data.csv", csv_text.encode("utf-8"))
     record.source_path = path
-    record.source_format = (
-        "FUSA" if path.suffix.lower() == ".fusa" else "FUS"
-    )
+    record.source_format = "FUSA" if path.suffix.lower() == ".fusa" else "FUS"
 
 
 def save_fusa(record: MeasurementRecord, path: Path) -> Path:
@@ -104,9 +99,7 @@ def load_fus(path: Path) -> MeasurementRecord:
 def _read_vtaz_csv(text_stream: io.TextIOBase) -> tuple[np.ndarray, np.ndarray]:
     content = text_stream.read()
     lines = [
-        line.removesuffix(";")
-        for line in content.strip().splitlines()
-        if line.strip()
+        line.removesuffix(";") for line in content.strip().splitlines() if line.strip()
     ]
     reader = csv.reader(lines)
     next(reader, None)
@@ -318,9 +311,7 @@ def load_fus_mdt(path: Path) -> MeasurementRecord:
             with ZipFile(cal_bytes, "r") as cal_zip:
                 if "coeff_temp.csv" in cal_zip.namelist():
                     arr = np.loadtxt(cal_zip.open("coeff_temp.csv"), dtype=float)
-                    cal_temp_coeffs = [
-                        float(v) for v in np.atleast_1d(arr).tolist()
-                    ]
+                    cal_temp_coeffs = [float(v) for v in np.atleast_1d(arr).tolist()]
 
     time_arr = cols["Time/s"]
     t1_arr = cols["T1/mV"]
@@ -431,9 +422,7 @@ FORMAT_LOADERS: dict[str, FormatLoader] = {
 def register_format_loader(extension: str, loader: FormatLoader) -> None:
     """Регистрирует загрузчик для нового файлового расширения без изменения диспетчера (OCP)."""
     norm_ext = (
-        extension.lower()
-        if extension.startswith(".")
-        else f".{extension.lower()}"
+        extension.lower() if extension.startswith(".") else f".{extension.lower()}"
     )
     FORMAT_LOADERS[norm_ext] = loader
 

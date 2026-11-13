@@ -29,6 +29,19 @@ def get_pyproject_version(root_path: Path) -> str:
     return f"v{ver}"
 
 
+def render_svg_pixmap(svg_path: Path, size: int = 128) -> QPixmap:
+    """Рендерит векторную иконку .svg в QPixmap заданного размера."""
+    img = QImage(size, size, QImage.Format.Format_ARGB32)
+    img.fill(Qt.GlobalColor.transparent)
+    if svg_path.exists():
+        painter = QPainter(img)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        renderer = QSvgRenderer(str(svg_path))
+        renderer.render(painter, QRectF(0, 0, size, size))
+        painter.end()
+    return QPixmap.fromImage(img)
+
+
 def render_splash_image(
     subtitle: str,
     version_str: str,
@@ -46,8 +59,8 @@ def render_splash_image(
     painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
 
     gradient = QLinearGradient(0, 0, width, height)
-    gradient.setColorAt(0.0, QColor("#2C3E50"))
-    gradient.setColorAt(1.0, QColor("#4CA1AF"))
+    gradient.setColorAt(0.0, QColor("#0F172A"))
+    gradient.setColorAt(1.0, QColor("#1E3A8A"))
     painter.setBrush(QBrush(gradient))
     painter.setPen(Qt.PenStyle.NoPen)
     painter.drawRoundedRect(0, 0, width, height, 15, 15)
