@@ -50,9 +50,13 @@ from fusion_common.packaging import (
     write_pyinstaller_version_file,
 )
 from fusion_common.splash import (
+    ANALYSIS_ICON_BG,
+    COLLECTION_ICON_BG,
     finish_startup_splash,
     generate_splash_png,
     get_pyproject_version,
+    render_app_icon_image,
+    render_app_icon_pixmap,
     render_splash_image,
     render_svg_pixmap,
     show_startup_splash,
@@ -76,6 +80,8 @@ __version__: str = version("fusion-common")
 
 __all__ = [
     "ALL_SUPPORTED_FILTER",
+    "ANALYSIS_ICON_BG",
+    "COLLECTION_ICON_BG",
     "CURRENT_SCHEMA_VERSION",
     "DEFAULT_VR_COEFFICIENTS",
     "DEFAULT_XA_COEFFICIENTS",
@@ -125,6 +131,8 @@ __all__ = [
     "make_xa_thermocouple",
     "migrate_manifest_dict",
     "register_format_loader",
+    "render_app_icon_image",
+    "render_app_icon_pixmap",
     "render_splash_image",
     "render_svg_pixmap",
     "save_fus",

@@ -307,13 +307,17 @@ def test_splash_rendering_qimage(tmp_path: Path) -> None:
     assert ver.startswith("v0.")
 
     out_png = tmp_path / "splash.png"
+    icon_png = tmp_path / "icon.png"
     generate_splash_png(
-        svg_path=tmp_path / "nonexistent.svg",
+        svg_path=None,
         output_path=out_png,
         version_str=ver,
         subtitle="Unit Test Subtitle",
+        icon_bg_color="#FD700D",
+        icon_output_path=icon_png,
     )
     assert out_png.exists() and out_png.stat().st_size > 1000
+    assert icon_png.exists() and icon_png.stat().st_size > 1000
 
 
 def test_calibration_manager_and_packaging_helpers(tmp_path: Path) -> None:
