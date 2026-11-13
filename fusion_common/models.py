@@ -29,6 +29,7 @@ class MeasurementManifest(BaseModel):
     """Манифест контейнера измерения (.fus) и проекта анализа (.fusa) с паспортом SCRAM/ICTAC."""
 
     schema_version: str = "1.0"
+    software_version: str = ""
     sample: str = ""
     operator: str = ""
     instrument: str = ""

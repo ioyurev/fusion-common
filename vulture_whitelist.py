@@ -100,6 +100,7 @@ _PUBLIC_API = (
     REFERENCE_STANDARDS,
     MeasurementManifest,
     MeasurementManifest.analysis_state,
+    MeasurementManifest.software_version,
     MeasurementManifest.instrument,
     MeasurementManifest.sample_mass_mg,
     MeasurementManifest.crucible,
