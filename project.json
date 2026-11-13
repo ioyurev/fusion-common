@@ -12,7 +12,8 @@
     "CLAUDE.md",
     "GEMINI.md",
     ".claude/**",
-    ".vscode/**"
+    ".vscode/**",
+    "fusion_common/assets/*.svg"
   ],
   "categories": [
     {
