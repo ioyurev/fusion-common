@@ -13,13 +13,22 @@ from PySide6.QtGui import (
     QBrush,
     QColor,
     QFont,
+    QIcon,
     QImage,
     QLinearGradient,
     QPainter,
     QPixmap,
 )
 from PySide6.QtSvg import QSvgRenderer
-from PySide6.QtWidgets import QApplication, QSplashScreen, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QDialog,
+    QLabel,
+    QPushButton,
+    QSplashScreen,
+    QVBoxLayout,
+    QWidget,
+)
 
 COMMON_ICON_BG = "#0D9488"
 COLLECTION_ICON_BG = "#FD700D"
@@ -243,6 +252,69 @@ def finish_startup_splash(
             min_display_ms,
             lambda: splash.finish(main_window),
         )
+
+
+class FusionAboutDialog(QDialog):
+    """Единое окно 'О программе' для приложений экосистемы Fusion."""
+
+    def __init__(
+        self,
+        app_title: str,
+        version_str: str,
+        description: str,
+        repo_slug: str,
+        icon_bg_color: str = ANALYSIS_ICON_BG,
+        zenodo_doi: str = "10.5281/zenodo.XXXXXXX",
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(f"О программе {app_title}")
+        self.resize(500, 390)
+        self.setWindowIcon(QIcon(render_app_icon_pixmap(icon_bg_color, 64)))
+
+        layout = QVBoxLayout(self)
+        lbl_icon = QLabel()
+        lbl_icon.setPixmap(render_app_icon_pixmap(icon_bg_color, 128))
+        layout.addWidget(lbl_icon, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        tpl = (
+            importlib.resources.files("fusion_common")
+            .joinpath("assets/about.html")
+            .read_text(encoding="utf-8")
+        )
+        html_text = tpl.format(
+            app_title=app_title,
+            version=version_str.lstrip("v"),
+            description=description,
+            repo_slug=repo_slug,
+            zenodo_doi=zenodo_doi,
+        )
+        lbl_body = QLabel(html_text)
+        lbl_body.setWordWrap(True)
+        lbl_body.setOpenExternalLinks(True)
+        layout.addWidget(lbl_body)
+
+        btn_close = QPushButton("Закрыть")
+        btn_close.clicked.connect(self.accept)
+        layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignRight)
+
+
+def show_fusion_about(
+    app_title: str,
+    version_str: str,
+    description: str,
+    repo_slug: str,
+    icon_bg_color: str = ANALYSIS_ICON_BG,
+    parent: QWidget | None = None,
+) -> None:
+    FusionAboutDialog(
+        app_title=app_title,
+        version_str=version_str,
+        description=description,
+        repo_slug=repo_slug,
+        icon_bg_color=icon_bg_color,
+        parent=parent,
+    ).exec()
 
 
 def main_cli() -> None:

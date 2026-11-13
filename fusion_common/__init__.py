@@ -53,6 +53,7 @@ from fusion_common.splash import (
     ANALYSIS_ICON_BG,
     COLLECTION_ICON_BG,
     COMMON_ICON_BG,
+    FusionAboutDialog,
     finish_startup_splash,
     generate_app_icon_svg,
     generate_splash_png,
@@ -61,6 +62,7 @@ from fusion_common.splash import (
     render_app_icon_pixmap,
     render_splash_image,
     render_svg_pixmap,
+    show_fusion_about,
     show_startup_splash,
 )
 from fusion_common.thermometry import (
@@ -101,6 +103,7 @@ __all__ = [
     "ChannelDescriptor",
     "CjcData",
     "DirectPolynomialCalibration",
+    "FusionAboutDialog",
     "IdentityCalibration",
     "LookupSplineCalibration",
     "LookupSplineSensorModel",
@@ -141,6 +144,7 @@ __all__ = [
     "render_svg_pixmap",
     "save_fus",
     "save_fusa",
+    "show_fusion_about",
     "show_startup_splash",
     "write_pyinstaller_version_file",
 ]
