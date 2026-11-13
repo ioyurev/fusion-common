@@ -1,5 +1,9 @@
 # Fusion Common
 
+<p align="center">
+  <img src="assets/icon.svg" width="128" alt="Fusion Common Icon">
+</p>
+
 Общая библиотека доменных моделей, эталонных термопар ГОСТ Р 8.585-2001, калибровок температуры, файловых кодеков и сборочных утилит для экосистемы термического анализа **Fusion** (`fusion-collection`, `fusion-analysis`).
 
 ## Возможности

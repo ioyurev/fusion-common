@@ -52,7 +52,9 @@ from fusion_common.packaging import (
 from fusion_common.splash import (
     ANALYSIS_ICON_BG,
     COLLECTION_ICON_BG,
+    COMMON_ICON_BG,
     finish_startup_splash,
+    generate_app_icon_svg,
     generate_splash_png,
     get_pyproject_version,
     render_app_icon_image,
@@ -82,6 +84,8 @@ __all__ = [
     "ALL_SUPPORTED_FILTER",
     "ANALYSIS_ICON_BG",
     "COLLECTION_ICON_BG",
+    "COMMON_ICON_BG",
+    "generate_app_icon_svg",
     "CURRENT_SCHEMA_VERSION",
     "DEFAULT_VR_COEFFICIENTS",
     "DEFAULT_XA_COEFFICIENTS",

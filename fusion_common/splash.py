@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import importlib.resources
 import sys
 import tomllib
 from pathlib import Path
 
 from loguru import logger
 from PySide6 import QtCore
-from PySide6.QtCore import QRectF, Qt
+from PySide6.QtCore import QByteArray, QRectF, Qt
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -20,9 +21,31 @@ from PySide6.QtGui import (
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QApplication, QSplashScreen, QWidget
 
+COMMON_ICON_BG = "#0D9488"
 COLLECTION_ICON_BG = "#FD700D"
 ANALYSIS_ICON_BG = "#1E293B"
-DTA_CURVES_SVG_PATH = Path(__file__).resolve().parent / "assets" / "dta_curves.svg"
+
+
+def _read_dta_curves_svg_text() -> str:
+    """Читает векторные кривые ДТА из пакетных ресурсов fusion_common (автономно и в .exe)."""
+    ref = importlib.resources.files("fusion_common").joinpath("assets/dta_curves.svg")
+    return ref.read_text(encoding="utf-8")
+
+
+def generate_app_icon_svg(bg_color: str, output_path: Path) -> Path:
+    """Генерирует готовый файл icon.svg (скруглённый фон bg_color + кривые ДТА из ресурсов)."""
+    raw_svg = _read_dta_curves_svg_text()
+    bg_rect = (
+        f'\n\t<rect x="29" y="29" width="710" height="710" '
+        f'rx="184" ry="184" fill="{bg_color}"/>'
+    )
+    marker = 'height="768">'
+    merged = (
+        raw_svg.replace(marker, marker + bg_rect, 1) if marker in raw_svg else raw_svg
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(merged, encoding="utf-8")
+    return output_path
 
 
 def get_pyproject_version(root_path: Path) -> str:
@@ -53,9 +76,9 @@ def render_app_icon_image(
         QRectF(margin, margin, rect_size, rect_size), radius, radius
     )
 
-    if DTA_CURVES_SVG_PATH.exists():
-        renderer = QSvgRenderer(str(DTA_CURVES_SVG_PATH))
-        renderer.render(painter, QRectF(0, 0, size, size))
+    svg_bytes = QByteArray(_read_dta_curves_svg_text().encode("utf-8"))
+    renderer = QSvgRenderer(svg_bytes)
+    renderer.render(painter, QRectF(0, 0, size, size))
     painter.end()
     return img
 
@@ -225,27 +248,32 @@ def finish_startup_splash(
 def main_cli() -> None:
     parser = argparse.ArgumentParser(description="Fusion Splash & Icon Generator")
     parser.add_argument("--title", default="Fusion")
-    parser.add_argument("--subtitle", required=True)
+    parser.add_argument("--subtitle", default=None)
     parser.add_argument("--svg", default=None)
     parser.add_argument("--bg-color", default=ANALYSIS_ICON_BG)
+    parser.add_argument("--svg-out", default=None)
     parser.add_argument("--icon-out", default=None)
-    parser.add_argument("--version-from", required=True)
+    parser.add_argument("--version-from", default=None)
     parser.add_argument("--out", default="splash.png")
     args = parser.parse_args()
 
-    _app = QApplication.instance() or QApplication(sys.argv)
-    ver = get_pyproject_version(Path(args.version_from))
-    svg_p = Path(args.svg) if args.svg else None
-    icon_p = Path(args.icon_out) if args.icon_out else None
-    generate_splash_png(
-        svg_path=svg_p,
-        output_path=Path(args.out),
-        version_str=ver,
-        subtitle=args.subtitle,
-        title=args.title,
-        icon_bg_color=str(args.bg_color),
-        icon_output_path=icon_p,
-    )
+    if args.svg_out:
+        generate_app_icon_svg(str(args.bg_color), Path(args.svg_out))
+
+    if args.subtitle and args.version_from:
+        _app = QApplication.instance() or QApplication(sys.argv)
+        ver = get_pyproject_version(Path(args.version_from))
+        svg_p = Path(args.svg) if args.svg else None
+        icon_p = Path(args.icon_out) if args.icon_out else None
+        generate_splash_png(
+            svg_path=svg_p,
+            output_path=Path(args.out),
+            version_str=ver,
+            subtitle=args.subtitle,
+            title=args.title,
+            icon_bg_color=str(args.bg_color),
+            icon_output_path=icon_p,
+        )
 
 
 if __name__ == "__main__":

@@ -283,16 +283,17 @@ def test_vtaz1_read_backward_compatibility(tmp_path: Path) -> None:
 
 
 def test_load_real_legacy_fus_mdt_if_present() -> None:
-    legacy_file = (
-        Path(__file__).resolve().parents[2]  # noqa: MI001
-        / "fusion-collection"
-        / "test.fus-mdt"
-    )
-    if not legacy_file.exists():
-        pytest.skip("test.fus-mdt not present")
+    from fusion_common import COMMON_ICON_BG, generate_app_icon_svg
+
+    legacy_file = Path(__file__).resolve().parent / "test.fus-mdt"
+    assert legacy_file.exists()
     record = load_measurement(legacy_file)
     assert record.source_format == "FUS-MDT"
     assert len(record.time_array) > 0
+
+    svg_icon = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
+    generate_app_icon_svg(COMMON_ICON_BG, svg_icon)
+    assert svg_icon.exists() and "<rect" in svg_icon.read_text(encoding="utf-8")
 
 
 def test_splash_rendering_qimage(tmp_path: Path) -> None:
