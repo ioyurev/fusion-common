@@ -33,7 +33,8 @@
       "name": "Fusion-Common: ядро термометрии, калибровок и форматов",
       "patterns": [
         "fusion_common/*.py",
-        "fusion_common/assets/*.html"
+        "fusion_common/assets/*.html",
+        "fusion_common/assets/*.md"
       ],
       "default": false,
       "description": "По-канальные модели измерений, полиморфные термопары и калибровки, кодеки .fus, .vtaz, .tda, .fus-mdt",

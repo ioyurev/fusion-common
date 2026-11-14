@@ -294,6 +294,20 @@ class FusionAboutDialog(QDialog):
         lbl_body.setOpenExternalLinks(True)
         layout.addWidget(lbl_body)
 
+        from fusion_common.docs_viewer import show_fusion_docs
+
+        pkg_name = repo_slug.replace("-", "_")
+        btn_docs = QPushButton("Открыть руководство и текст лицензии в программе...")
+        btn_docs.clicked.connect(
+            lambda: show_fusion_docs(
+                app_title=app_title,
+                package_name=pkg_name,
+                icon_bg_color=icon_bg_color,
+                parent=self,
+            )
+        )
+        layout.addWidget(btn_docs)
+
         btn_close = QPushButton("Закрыть")
         btn_close.clicked.connect(self.accept)
         layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignRight)

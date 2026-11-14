@@ -13,6 +13,12 @@ from fusion_common.calibration import (
     calculate_coefficients,
     evaluate_channel_temperature,
 )
+from fusion_common.docs_viewer import (
+    DocPage,
+    FusionDocsViewerDialog,
+    load_package_docs,
+    show_fusion_docs,
+)
 from fusion_common.formats import (
     ALL_SUPPORTED_FILTER,
     FORMAT_LOADERS,
@@ -103,7 +109,9 @@ __all__ = [
     "ChannelDescriptor",
     "CjcData",
     "DirectPolynomialCalibration",
+    "DocPage",
     "FusionAboutDialog",
+    "FusionDocsViewerDialog",
     "IdentityCalibration",
     "LookupSplineCalibration",
     "LookupSplineSensorModel",
@@ -130,6 +138,7 @@ __all__ = [
     "load_fus_fmdt",
     "load_fus_mdt",
     "load_measurement",
+    "load_package_docs",
     "load_tda",
     "load_vtaz",
     "make_dist_zip",
@@ -145,6 +154,7 @@ __all__ = [
     "save_fus",
     "save_fusa",
     "show_fusion_about",
+    "show_fusion_docs",
     "show_startup_splash",
     "write_pyinstaller_version_file",
 ]

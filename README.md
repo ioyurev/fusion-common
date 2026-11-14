@@ -20,4 +20,4 @@
 
 ## Лицензия
 
-Проект распространяется на условиях лицензии **GNU General Public License v3.0 or later (`GPL-3.0-or-later`)** (см. `LICENSE`).
+Проект распространяется на условиях лицензии **GNU General Public License v3.0 or later (`GPL-3.0-or-later`)** (см. [LICENSE.md](LICENSE.md) и [LICENSE.ru.md](LICENSE.ru.md)).
