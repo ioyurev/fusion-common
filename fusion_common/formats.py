@@ -10,6 +10,7 @@ from typing import IO, Literal
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import numpy as np
+from loguru import logger as log
 
 from fusion_common.calibration import (
     AdditivePolynomialCalibration,
@@ -281,8 +282,10 @@ def load_tda(path: Path) -> MeasurementRecord:
                     calibration=direct_cal,
                 )
             )
-        except ValueError:
-            pass
+        except ValueError as exc:
+            log.bind(path=str(path), error=str(exc)).warning(
+                "Failed to parse <FORMULE> coefficients in .tda file"
+            )
 
     return MeasurementRecord(
         manifest=MeasurementManifest(

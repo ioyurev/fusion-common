@@ -62,10 +62,7 @@ class MeasurementRecord:
         for ch in self.manifest.channels:
             if ch.unit in ("s", "sec") and ch.column in self.data:
                 return self.data[ch.column]
-        if self.data:
-            first_col = next(iter(self.data.values()))
-            return first_col
-        return np.array([], dtype=float)
+        raise KeyError("В записи измерения отсутствует канал времени (time)")
 
     def get_channel(self, column: str) -> np.ndarray | None:
         return self.data.get(column)
