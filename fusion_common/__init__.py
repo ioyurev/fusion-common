@@ -15,9 +15,9 @@ from fusion_common.calibration import (
 )
 from fusion_common.docs_viewer import (
     DocPage,
-    compile_docs_to_html_dir,
-    compile_license_to_html,
+    build_dist_docs_html,
     load_package_docs,
+    main_docs_cli,
     show_fusion_docs,
     show_fusion_license,
 )
@@ -126,11 +126,10 @@ __all__ = [
     "ThermocoupleManager",
     "__version__",
     "bisection_method",
+    "build_dist_docs_html",
     "calculate_coefficients",
     "calculate_speed",
     "centered_moving_average",
-    "compile_docs_to_html_dir",
-    "compile_license_to_html",
     "eval_polynomial_asc",
     "evaluate_channel_temperature",
     "finish_startup_splash",
@@ -144,6 +143,7 @@ __all__ = [
     "load_package_docs",
     "load_tda",
     "load_vtaz",
+    "main_docs_cli",
     "make_dist_zip",
     "make_gost_thermocouples",
     "make_vr_thermocouple",
