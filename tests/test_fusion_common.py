@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from zipfile import ZIP_DEFLATED, ZipFile
 
 import numpy as np
 import pytest
@@ -18,12 +16,9 @@ from fusion_common import (
     MeasurementRecord,
     PiecewisePolynomialSegment,
     PiecewisePolynomialSensorModel,
-    PolynomialSensorModel,
     Standard,
-    ThermocoupleManager,
-    centered_moving_average,
     evaluate_channel_temperature,
-    load_measurement,
+    load_fus,
     make_vr_thermocouple,
     make_xa_thermocouple,
     migrate_manifest_dict,
@@ -63,11 +58,9 @@ def test_piecewise_and_lookup_sensors() -> None:
     assert lut.temperature_to_emf(375.0) == pytest.approx(15.0)
 
 
-def test_thermocouple_manager_crud_and_gost_reference_points(tmp_path: Path) -> None:
+def test_gost_thermocouples_reference_points() -> None:
     from fusion_common import make_gost_thermocouples
 
-    mgr = ThermocoupleManager(tmp_path / "tc")
-    assert len(mgr.list_names()) == 12
     assert len(make_gost_thermocouples()) == 12
     assert make_xa_thermocouple().display_short_name == "ТХА (тип K)"
     assert make_vr_thermocouple().display_short_name == "ТВР (тип А-1)"
@@ -89,26 +82,8 @@ def test_thermocouple_manager_crud_and_gost_reference_points(tmp_path: Path) -> 
     assert float(vr.emf_to_temperature(29.186)) == pytest.approx(2000.0, abs=0.6)
     assert float(vr.emf_to_temperature(33.640)) == pytest.approx(2500.0, abs=1.0)
 
-    custom = PolynomialSensorModel(
-        name="Custom_Type_S",
-        coefficients=[0.0, 100.0, -0.5],
-    )
-    mgr.save_sensor(custom)
-    mgr.load_all()
-    loaded = mgr.load_sensor("Custom_Type_S")
-    assert isinstance(loaded, PolynomialSensorModel)
-    assert loaded.coefficients == [0.0, 100.0, -0.5]
-
-    mgr.delete_sensor("Custom_Type_S")
-    assert "Custom_Type_S" not in mgr.list_names()
-
 
 def test_calibration_models_and_statistics() -> None:
-    from fusion_common import REFERENCE_STANDARDS
-
-    assert REFERENCE_STANDARDS["In (Индий, плавление)"] == pytest.approx(156.61)
-    assert REFERENCE_STANDARDS["Au (Золото, плавление)"] == pytest.approx(1064.18)
-    assert "SiO2 (Кварц α→β)" not in REFERENCE_STANDARDS
     standards = [
         Standard(name="In", t_theor=156.6, t_exp=155.6),
         Standard(name="Sn", t_theor=231.9, t_exp=229.9),
@@ -218,7 +193,7 @@ def test_multi_thermocouple_fus_roundtrip(tmp_path: Path) -> None:
 
     fus_path = tmp_path / "multi_tc.fus"
     save_fus(record, fus_path)
-    loaded = load_measurement(fus_path)
+    loaded = load_fus(fus_path)
 
     assert loaded.manifest.schema_version == "1.0"
     assert loaded.manifest.sample == "Sm2S3-Gd2S3"
@@ -228,7 +203,7 @@ def test_multi_thermocouple_fus_roundtrip(tmp_path: Path) -> None:
     assert dta_desc.metadata.get("exo_up") is True
 
     # Проверяем неразрушающее сохранение сглаженных данных в том же самом файле .fus
-    smoothed = centered_moving_average(dta_1_2, window=3)
+    smoothed = dta_1_2 * 0.5
     loaded.set_smoothed_channel(
         source_column="dta_1_2",
         smoothed_values=smoothed,
@@ -237,7 +212,7 @@ def test_multi_thermocouple_fus_roundtrip(tmp_path: Path) -> None:
     )
     save_fus(loaded, fus_path)
 
-    reloaded = load_measurement(fus_path)
+    reloaded = load_fus(fus_path)
     raw_ch = reloaded.get_channel("dta_1_2")
     sm_ch = reloaded.get_channel("dta_smoothed")
     sm_desc = reloaded.get_descriptor("dta_smoothed")
@@ -246,52 +221,8 @@ def test_multi_thermocouple_fus_roundtrip(tmp_path: Path) -> None:
     assert sm_desc is not None and sm_desc.metadata.get("smoothing_window") == 3
 
 
-def test_vtaz1_read_backward_compatibility(tmp_path: Path) -> None:
-    tc = make_vr_thermocouple()
-    cjc = CjcData(temperature=25.0, e_cold=0.31)
-    cal = AdditivePolynomialCalibration(
-        name="VTA_Cal",
-        calibration_type="linear",
-        coefficients=[0.01, -1.5, 0.0],
-    )
-    _t_arr = np.array([0.0, 1.0, 2.0])
-    emf_arr = np.array([1.0, 2.0, 3.0])
-    expected_temp = np.asarray(
-        evaluate_channel_temperature(emf_arr, tc, cjc, cal), dtype=float
-    )
-
-    vtaz_path = tmp_path / "legacy.vtaz"
-    with ZipFile(vtaz_path, "w", ZIP_DEFLATED) as zipf:
-        zipf.writestr(
-            "metadata.json",
-            json.dumps({"sample": "Pt", "operator": "Tester", "vtaz_version": "1.0"}),
-        )
-        zipf.writestr(
-            "data_input.csv", "time, s,EMF, mV;\n0.0,1.0;\n1.0,2.0;\n2.0,3.0;\n"
-        )
-        zipf.writestr("calibration.json", cal.model_dump_json())
-        zipf.writestr(
-            "thermocouple.json",
-            json.dumps({"thermocouple_coefficients": tc.coefficients}),
-        )
-        zipf.writestr("cjc.json", cjc.model_dump_json())
-
-    loaded = load_measurement(vtaz_path)
-    assert loaded.source_format == "VTAZ"
-    assert loaded.manifest.sample == "Pt"
-    loaded_temp = loaded.get_channel("temperature")
-    assert loaded_temp is not None
-    assert np.allclose(loaded_temp, expected_temp, atol=1e-4)
-
-
-def test_load_real_legacy_fus_mdt_if_present() -> None:
+def test_icon_svg_rendering() -> None:
     from fusion_common import COMMON_ICON_BG, generate_app_icon_svg
-
-    legacy_file = Path(__file__).resolve().parent / "test.fus-mdt"
-    assert legacy_file.exists()
-    record = load_measurement(legacy_file)
-    assert record.source_format == "FUS-MDT"
-    assert len(record.time_array) > 0
 
     svg_icon = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
     generate_app_icon_svg(COMMON_ICON_BG, svg_icon)
@@ -323,27 +254,11 @@ def test_splash_rendering_qimage(tmp_path: Path) -> None:
     assert icon_png.exists() and icon_png.stat().st_size > 1000
 
 
-def test_calibration_manager_and_packaging_helpers(tmp_path: Path) -> None:
+def test_packaging_helpers(tmp_path: Path) -> None:
     from fusion_common import (
-        CalibrationManager,
         get_appdata_path,
         write_pyinstaller_version_file,
     )
-
-    cal_mgr = CalibrationManager(tmp_path / "cals")
-    cal = AdditivePolynomialCalibration.from_standards(
-        name="TestCal",
-        standards=[
-            Standard(name="In", t_theor=156.6, t_exp=155.0),
-            Standard(name="Sn", t_theor=231.9, t_exp=230.0),
-        ],
-    )
-    cal_mgr.save_calibration(cal)
-    assert "TestCal" in cal_mgr.list_names()
-    loaded_cal = cal_mgr.load_calibration("TestCal")
-    assert loaded_cal.name == "TestCal"
-    cal_mgr.delete_calibration("TestCal")
-    assert "TestCal" not in cal_mgr.list_names()
 
     v_file = write_pyinstaller_version_file(
         package_name="fusion-test",

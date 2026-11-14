@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Annotated, Literal
 
 import numpy as np
-from loguru import logger as log
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field
 
 from fusion_common.math_utils import bisection_method, eval_polynomial_asc
 
@@ -645,59 +642,3 @@ def make_gost_thermocouples() -> list[SensorSpec]:
             ],
         ),
     ]
-
-
-class ThermocoupleManager:
-    """Файловый менеджер пользовательских и стандартных профилей термопар ГОСТ Р 8.585-2001."""
-
-    def __init__(self, storage_dir: Path) -> None:
-        self.storage_dir = storage_dir
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
-        self.sensors: dict[str, SensorSpec] = {}
-        self._ensure_defaults_and_load()
-
-    def _ensure_defaults_and_load(self) -> None:
-        self.load_all()
-        for preset in make_gost_thermocouples():
-            existing = self.sensors.get(preset.name)
-            if existing is None or existing != preset:
-                self.save_sensor(preset)
-
-    def save_sensor(self, sensor: SensorSpec) -> None:
-        safe_stem = "".join(
-            ch if (ch.isalnum() or ch in (" ", "-", "_")) else "_" for ch in sensor.name
-        ).strip()
-        path = self.storage_dir / f"{safe_stem or 'sensor'}.json"
-        path.write_text(sensor.model_dump_json(indent=2), encoding="utf-8")
-        self.sensors[sensor.name] = sensor
-
-    def load_sensor(self, name: str) -> SensorSpec:
-        if name in self.sensors:
-            return self.sensors[name]
-        raise KeyError(f"Профиль термопары '{name}' не найден")
-
-    def load_all(self) -> None:
-        self.sensors.clear()
-        adapter: TypeAdapter[SensorSpec] = TypeAdapter(SensorSpec)
-        for path in sorted(self.storage_dir.glob("*.json")):
-            try:
-                raw = json.loads(path.read_text(encoding="utf-8"))
-                sensor = adapter.validate_python(raw)
-                self.sensors[sensor.name] = sensor
-            except (OSError, ValueError) as exc:
-                log.bind(path=str(path), error=str(exc)).warning(
-                    "Failed to load thermocouple profile"
-                )
-
-    def delete_sensor(self, name: str) -> None:
-        self.sensors.pop(name, None)
-        for path in self.storage_dir.glob("*.json"):
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                if data.get("name") == name:
-                    path.unlink()
-            except (OSError, ValueError):
-                continue
-
-    def list_names(self) -> list[str]:
-        return list(self.sensors.keys())

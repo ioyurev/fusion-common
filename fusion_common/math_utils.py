@@ -40,37 +40,3 @@ def bisection_method(
     raise ValueError(
         f"Метод бисекции не сошёлся за {max_iterations} итераций для значения {target_value}"
     )
-
-
-def centered_moving_average(y: np.ndarray, window: int) -> np.ndarray:
-    """Вычисляет центрированное скользящее среднее за O(N) на чистом NumPy без обрезки краёв."""
-    arr = np.asarray(y, dtype=float)
-    n = len(arr)
-    w = max(1, int(window))
-    if n == 0 or w == 1:
-        return arr.copy()
-
-    idx = np.arange(n)
-    half = w // 2
-    starts = np.maximum(0, idx - half)
-    ends = np.minimum(n, idx + (w - half))
-    csum = np.concatenate((np.array([0.0]), np.cumsum(arr, dtype=float)))
-    counts = np.maximum(1, ends - starts)
-    return np.asarray((csum[ends] - csum[starts]) / counts, dtype=float)
-
-
-def calculate_speed(
-    x: np.ndarray,
-    y: np.ndarray | None,
-    temp_smoothing_window: int = 15,
-    speed_smoothing_window: int = 30,
-) -> np.ndarray | None:
-    """Рассчитывает сглаженную производную dy/dx (например, скорость нагрева dT/dt)."""
-    if y is None:
-        return None
-    if len(x) < 2:
-        return np.zeros_like(y, dtype=float)
-
-    smooth_y = centered_moving_average(y, max(1, temp_smoothing_window))
-    raw_speed = np.asarray(np.gradient(smooth_y, x), dtype=float)
-    return centered_moving_average(raw_speed, max(1, speed_smoothing_window))
