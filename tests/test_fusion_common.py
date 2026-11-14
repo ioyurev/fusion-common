@@ -64,13 +64,13 @@ def test_piecewise_and_lookup_sensors() -> None:
 
 
 def test_thermocouple_manager_crud_and_gost_reference_points(tmp_path: Path) -> None:
-    from fusion_common import format_short_sensor_name, make_gost_thermocouples
+    from fusion_common import make_gost_thermocouples
 
     mgr = ThermocoupleManager(tmp_path / "tc")
     assert len(mgr.list_names()) == 12
     assert len(make_gost_thermocouples()) == 12
-    assert format_short_sensor_name("ТХА (тип K, Хромель-Алюмель)") == "ТХА (тип K)"
-    assert format_short_sensor_name("ТВР (тип А-1, Вольфрам-Рений)") == "ТВР (тип А-1)"
+    assert make_xa_thermocouple().display_short_name == "ТХА (тип K)"
+    assert make_vr_thermocouple().display_short_name == "ТВР (тип А-1)"
 
     # Контрольные точки ТХА (тип K) во всех трёх поддиапазонах ГОСТ Р 8.585-2001:
     # -100 °C -> -3.554 мВ; 200 °C -> 8.138 мВ; 500 °C -> 20.644 мВ;

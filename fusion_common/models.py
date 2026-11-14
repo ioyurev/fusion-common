@@ -30,6 +30,7 @@ class MeasurementManifest(BaseModel):
 
     schema_version: str = "1.0"
     software_version: str = ""
+    common_version: str = ""
     sample: str = ""
     operator: str = ""
     instrument: str = ""

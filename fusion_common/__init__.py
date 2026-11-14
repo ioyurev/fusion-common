@@ -16,8 +16,10 @@ from fusion_common.calibration import (
 from fusion_common.docs_viewer import (
     DocPage,
     FusionDocsViewerDialog,
+    FusionLicenseDialog,
     load_package_docs,
     show_fusion_docs,
+    show_fusion_license,
 )
 from fusion_common.formats import (
     ALL_SUPPORTED_FILTER,
@@ -81,7 +83,6 @@ from fusion_common.thermometry import (
     PolynomialSensorModel,
     SensorSpec,
     ThermocoupleManager,
-    format_short_sensor_name,
     make_gost_thermocouples,
     make_vr_thermocouple,
     make_xa_thermocouple,
@@ -113,6 +114,7 @@ __all__ = [
     "DocPage",
     "FusionAboutDialog",
     "FusionDocsViewerDialog",
+    "FusionLicenseDialog",
     "IdentityCalibration",
     "LookupSplineCalibration",
     "LookupSplineSensorModel",
@@ -132,7 +134,6 @@ __all__ = [
     "eval_polynomial_asc",
     "evaluate_channel_temperature",
     "finish_startup_splash",
-    "format_short_sensor_name",
     "generate_splash_png",
     "get_appdata_path",
     "get_pyproject_version",
@@ -157,6 +158,7 @@ __all__ = [
     "save_fusa",
     "show_fusion_about",
     "show_fusion_docs",
+    "show_fusion_license",
     "show_startup_splash",
     "write_pyinstaller_version_file",
 ]

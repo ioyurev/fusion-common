@@ -294,10 +294,13 @@ class FusionAboutDialog(QDialog):
         lbl_body.setOpenExternalLinks(True)
         layout.addWidget(lbl_body)
 
-        from fusion_common.docs_viewer import show_fusion_docs
+        from PySide6.QtWidgets import QHBoxLayout
+
+        from fusion_common.docs_viewer import show_fusion_docs, show_fusion_license
 
         pkg_name = repo_slug.replace("-", "_")
-        btn_docs = QPushButton("Открыть руководство и текст лицензии в программе...")
+        btns_row = QHBoxLayout()
+        btn_docs = QPushButton("Руководство пользователя...")
         btn_docs.clicked.connect(
             lambda: show_fusion_docs(
                 app_title=app_title,
@@ -306,11 +309,21 @@ class FusionAboutDialog(QDialog):
                 parent=self,
             )
         )
-        layout.addWidget(btn_docs)
-
+        btn_lic = QPushButton("Лицензия GNU GPL v3.0...")
+        btn_lic.clicked.connect(
+            lambda: show_fusion_license(
+                app_title=app_title,
+                icon_bg_color=icon_bg_color,
+                parent=self,
+            )
+        )
         btn_close = QPushButton("Закрыть")
         btn_close.clicked.connect(self.accept)
-        layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignRight)
+        btns_row.addWidget(btn_docs)
+        btns_row.addWidget(btn_lic)
+        btns_row.addStretch()
+        btns_row.addWidget(btn_close)
+        layout.addLayout(btns_row)
 
 
 def show_fusion_about(

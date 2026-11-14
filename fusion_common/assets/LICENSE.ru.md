@@ -16,6 +16,6 @@ Foundation).
 сопровождаться открытием полного исходного кода всех изменений под той же
 лицензией GNU GPL v3.0.
 
-- **Полный текст лицензии на русском языке:** [https://www.gnu.org/licenses/gpl-3.0.ru.html](https://www.gnu.org/licenses/gpl-3.0.ru.html)
+- **Официальная страница лицензии GNU GPL v3.0:** [https://www.gnu.org/licenses/gpl-3.0.ru.html](https://www.gnu.org/licenses/gpl-3.0.ru.html)
 - **Официальный оригинал на английском языке:** [https://www.gnu.org/licenses/gpl-3.0.html](https://www.gnu.org/licenses/gpl-3.0.html)
 - **SPDX-License-Identifier:** `GPL-3.0-or-later`
