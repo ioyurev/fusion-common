@@ -144,10 +144,27 @@ class CjcData(BaseModel):
         return np.asarray(raw_emf, dtype=float) + self.e_cold
 
 
+_OBSOLETE_PRESET_NAMES: dict[str, str] = {
+    "ВР (Вольфрам-Рений)": "ТВР (тип А-1, Вольфрам-Рений)",
+    "ХА (Хромель-Алюмель, тип K)": "ТХА (тип K, Хромель-Алюмель)",
+    "ТПП (тип S, Платинородий-Платина ПР-10/ПлТ)": "ТПП (тип S, Платинородий-Платина)",
+    "ТПП (тип R, Платинородий-Платина ПР-13/ПлТ)": "ТПП (тип R, Платинородий-Платина)",
+    "ТПР (тип B, Платинородий ПР-30/ПР-6)": "ТПР (тип B, Платинородий-Платинородий)",
+}
+
+
+def format_short_sensor_name(name: str) -> str:
+    """Возвращает краткое обозначение термопары вида 'ТХА (тип K)' для главного окна."""
+    if "(" in name and "," in name:
+        prefix, _ = name.split(",", maxsplit=1)  # noqa: PU001
+        return f"{prefix.strip()})"
+    return name.strip()
+
+
 def make_vr_thermocouple() -> PolynomialSensorModel:
     """ТВР (тип А-1, Вольфрам-Рений ВР5/20) по ГОСТ Р 8.585-2001 (0..2500 °C)."""
     return PolynomialSensorModel(
-        name="ВР (Вольфрам-Рений)",
+        name="ТВР (тип А-1, Вольфрам-Рений)",
         description="ГОСТ Р 8.585-2001: ТВР тип А-1 (0..2500 °C, 0..33.640 мВ)",
         coefficients=list(DEFAULT_VR_COEFFICIENTS),
         emf_min_mv=-0.1,
@@ -158,7 +175,7 @@ def make_vr_thermocouple() -> PolynomialSensorModel:
 def make_xa_thermocouple() -> PiecewisePolynomialSensorModel:
     """ТХА (тип K, Хромель-Алюмель) по ГОСТ Р 8.585-2001 (-200..1372 °C, 3 поддиапазона)."""
     return PiecewisePolynomialSensorModel(
-        name="ХА (Хромель-Алюмель, тип K)",
+        name="ТХА (тип K, Хромель-Алюмель)",
         description="ГОСТ Р 8.585-2001: ТХА тип K (-200..1372 °C, -5.891..54.886 мВ)",
         emf_min_mv=-5.891,
         emf_max_mv=54.886,
@@ -240,7 +257,7 @@ def make_gost_thermocouples() -> list[SensorSpec]:
         ),
         make_xa_thermocouple(),
         PiecewisePolynomialSensorModel(
-            name="ТПП (тип S, Платинородий-Платина ПР-10/ПлТ)",
+            name="ТПП (тип S, Платинородий-Платина)",
             description="ГОСТ Р 8.585-2001: ТПП тип S (-50..1768.1 °C, -0.235..18.694 мВ)",
             emf_min_mv=-0.235,
             emf_max_mv=18.694,
@@ -303,7 +320,7 @@ def make_gost_thermocouples() -> list[SensorSpec]:
             ],
         ),
         PiecewisePolynomialSensorModel(
-            name="ТПП (тип R, Платинородий-Платина ПР-13/ПлТ)",
+            name="ТПП (тип R, Платинородий-Платина)",
             description="ГОСТ Р 8.585-2001: ТПП тип R (-50..1768.1 °C, -0.225..21.103 мВ)",
             emf_min_mv=-0.225,
             emf_max_mv=21.103,
@@ -367,7 +384,7 @@ def make_gost_thermocouples() -> list[SensorSpec]:
             ],
         ),
         PiecewisePolynomialSensorModel(
-            name="ТПР (тип B, Платинородий ПР-30/ПР-6)",
+            name="ТПР (тип B, Платинородий-Платинородий)",
             description="ГОСТ Р 8.585-2001: ТПР тип B (250..1820 °C, 0.291..13.820 мВ)",
             emf_min_mv=0.291,
             emf_max_mv=13.820,
@@ -631,6 +648,9 @@ class ThermocoupleManager:
 
     def _ensure_defaults_and_load(self) -> None:
         self.load_all()
+        for old_name in _OBSOLETE_PRESET_NAMES:
+            if old_name in self.sensors:
+                self.delete_sensor(old_name)
         for preset in make_gost_thermocouples():
             existing = self.sensors.get(preset.name)
             if existing is None or existing != preset:
@@ -645,8 +665,9 @@ class ThermocoupleManager:
         self.sensors[sensor.name] = sensor
 
     def load_sensor(self, name: str) -> SensorSpec:
-        if name in self.sensors:
-            return self.sensors[name]
+        mapped = _OBSOLETE_PRESET_NAMES.get(name, name)
+        if mapped in self.sensors:
+            return self.sensors[mapped]
         raise KeyError(f"Профиль термопары '{name}' не найден")
 
     def load_all(self) -> None:
