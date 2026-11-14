@@ -6,7 +6,7 @@ import json
 from collections.abc import Callable
 from io import StringIO, TextIOWrapper
 from pathlib import Path
-from typing import Literal
+from typing import IO, Literal
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import numpy as np
@@ -58,17 +58,27 @@ def _parse_csv_columns(text_stream: io.TextIOBase) -> dict[str, np.ndarray]:
     return {name: np.array(vals, dtype=float) for name, vals in zip(col_names, buckets)}
 
 
-def save_fus(record: MeasurementRecord, path: Path) -> None:
-    """Сохраняет измерение в контейнер .fus (или проект анализа в .fusa)."""
+def save_fus(record: MeasurementRecord, path: Path | IO[bytes]) -> None:
+    """Сохраняет измерение в контейнер .fus / .fusa (по пути Path или в открытый IO[bytes])."""
     cols = record.ordered_columns()
     csv_text = _serialize_csv(record.data, cols)
     manifest_json = record.manifest.model_dump_json(indent=2)
 
+    if isinstance(path, Path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with ZipFile(path, "w", ZIP_DEFLATED) as zipf:
+            zipf.writestr("manifest.json", manifest_json.encode("utf-8"))
+            zipf.writestr("data.csv", csv_text.encode("utf-8"))
+        record.source_path = path
+        record.source_format = "FUSA" if path.suffix.lower() == ".fusa" else "FUS"
+        return
+
+    path.seek(0)
+    path.truncate(0)
     with ZipFile(path, "w", ZIP_DEFLATED) as zipf:
         zipf.writestr("manifest.json", manifest_json.encode("utf-8"))
         zipf.writestr("data.csv", csv_text.encode("utf-8"))
-    record.source_path = path
-    record.source_format = "FUSA" if path.suffix.lower() == ".fusa" else "FUS"
+    path.flush()
 
 
 def save_fusa(record: MeasurementRecord, path: Path) -> Path:
