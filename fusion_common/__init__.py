@@ -15,8 +15,8 @@ from fusion_common.calibration import (
 )
 from fusion_common.docs_viewer import (
     DocPage,
-    FusionDocsViewerDialog,
-    FusionLicenseDialog,
+    compile_docs_to_html_dir,
+    compile_license_to_html,
     load_package_docs,
     show_fusion_docs,
     show_fusion_license,
@@ -113,8 +113,6 @@ __all__ = [
     "DirectPolynomialCalibration",
     "DocPage",
     "FusionAboutDialog",
-    "FusionDocsViewerDialog",
-    "FusionLicenseDialog",
     "IdentityCalibration",
     "LookupSplineCalibration",
     "LookupSplineSensorModel",
@@ -131,6 +129,8 @@ __all__ = [
     "calculate_coefficients",
     "calculate_speed",
     "centered_moving_average",
+    "compile_docs_to_html_dir",
+    "compile_license_to_html",
     "eval_polynomial_asc",
     "evaluate_channel_temperature",
     "finish_startup_splash",

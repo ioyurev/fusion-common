@@ -300,7 +300,7 @@ class FusionAboutDialog(QDialog):
 
         pkg_name = repo_slug.replace("-", "_")
         btns_row = QHBoxLayout()
-        btn_docs = QPushButton("Руководство пользователя...")
+        btn_docs = QPushButton("Руководство пользователя")
         btn_docs.clicked.connect(
             lambda: show_fusion_docs(
                 app_title=app_title,
@@ -309,7 +309,7 @@ class FusionAboutDialog(QDialog):
                 parent=self,
             )
         )
-        btn_lic = QPushButton("Лицензия GNU GPL v3.0...")
+        btn_lic = QPushButton("Лицензия GNU GPL v3.0")
         btn_lic.clicked.connect(
             lambda: show_fusion_license(
                 app_title=app_title,
