@@ -255,6 +255,16 @@ def test_splash_rendering_qimage(tmp_path: Path) -> None:
     assert (tmp_path / "wizard_large.bmp").exists()
     assert (tmp_path / "wizard_small.bmp").exists()
 
+    from fusion_common import resolve_ui_icon
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QStyle
+
+    ico = resolve_ui_icon(
+        QIcon.ThemeIcon.DocumentOpen,
+        QStyle.StandardPixmap.SP_DialogOpenButton,
+    )
+    assert not ico.isNull()
+
 
 def test_packaging_helpers(tmp_path: Path) -> None:
     from fusion_common import (

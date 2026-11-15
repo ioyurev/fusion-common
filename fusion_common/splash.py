@@ -34,6 +34,7 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QSplashScreen,
+    QStyle,
     QVBoxLayout,
     QWidget,
 )
@@ -71,6 +72,21 @@ def get_pyproject_version(root_path: Path) -> str:
     data = tomllib.loads(toml_path.read_text(encoding="utf-8"))
     ver = str(data["project"]["version"])
     return f"v{ver}"
+
+
+def resolve_ui_icon(
+    theme_icon: QIcon.ThemeIcon,
+    fallback_pixmap: QStyle.StandardPixmap | None = None,
+) -> QIcon:
+    """Возвращает иконку QIcon.ThemeIcon с гарантированным фоллбеком на QStyle.StandardPixmap (для Windows 10)."""
+    ico = QIcon.fromTheme(theme_icon)
+    if not ico.isNull():
+        return ico
+    if fallback_pixmap is not None:
+        app = QApplication.instance()
+        if isinstance(app, QApplication):
+            return app.style().standardIcon(fallback_pixmap)
+    return ico
 
 
 def render_app_icon_image(
@@ -302,7 +318,10 @@ def show_startup_splash(
     title: str = "Fusion",
     icon_bg_color: str = ANALYSIS_ICON_BG,
 ) -> QSplashScreen | None:
-    """Показывает QSplashScreen при запуске из исходников (вне PyInstaller)."""
+    """Настраивает стиль (с поддержкой тёмной темы на Windows 10/11), иконку всех окон и сплэш-экран."""
+    if app.style().name().lower() == "windowsvista":
+        app.setStyle("Fusion")
+    app.setWindowIcon(QIcon(render_app_icon_pixmap(icon_bg_color, 64)))
     if getattr(sys, "frozen", False):
         return None
     img = render_splash_image(
@@ -384,6 +403,12 @@ class FusionAboutDialog(QDialog):
         layout.addWidget(lbl_body)
 
         btn_close = QPushButton("Закрыть")
+        btn_close.setIcon(
+            resolve_ui_icon(
+                QIcon.ThemeIcon.WindowClose,
+                QStyle.StandardPixmap.SP_DialogCloseButton,
+            )
+        )
         btn_close.clicked.connect(self.accept)
         layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignRight)
 
@@ -513,9 +538,33 @@ class FusionLogViewerDialog(QDialog):
 
         btn_row = QHBoxLayout()
         btn_copy = QPushButton("Копировать всё")
+        btn_copy.setIcon(
+            resolve_ui_icon(
+                QIcon.ThemeIcon.EditCopy,
+                QStyle.StandardPixmap.SP_FileDialogDetailedView,
+            )
+        )
         btn_clear = QPushButton("Очистить экран")
+        btn_clear.setIcon(
+            resolve_ui_icon(
+                QIcon.ThemeIcon.EditClear,
+                QStyle.StandardPixmap.SP_DialogResetButton,
+            )
+        )
         btn_folder = QPushButton("Открыть папку логов")
+        btn_folder.setIcon(
+            resolve_ui_icon(
+                QIcon.ThemeIcon.FolderOpen,
+                QStyle.StandardPixmap.SP_DirOpenIcon,
+            )
+        )
         btn_close = QPushButton("Закрыть")
+        btn_close.setIcon(
+            resolve_ui_icon(
+                QIcon.ThemeIcon.WindowClose,
+                QStyle.StandardPixmap.SP_DialogCloseButton,
+            )
+        )
 
         btn_copy.clicked.connect(
             lambda: QApplication.clipboard().setText(self.text_edit.toPlainText())
