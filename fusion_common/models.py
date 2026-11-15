@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +11,68 @@ from pydantic import BaseModel, Field
 
 from fusion_common.calibration import CalibrationSpec
 from fusion_common.thermometry import CjcData, SensorSpec
+
+
+class ChannelKey(StrEnum):
+    """Канонические имена колонок контейнера .fus / .fusa."""
+
+    TIME = "time"
+    EMF = "emf"
+    EMF_1 = "emf_1"
+    EMF_2 = "emf_2"
+    DTA = "dta"
+    DTA_SMOOTHED = "dta_smoothed"
+    TEMPERATURE = "temperature"
+    MASS = "mass"
+    HEATER_OUTPUT = "heater_output"
+
+
+class OnsetStateModel(BaseModel):
+    ci: int
+    bi: int
+    is_onset: bool = True
+    label_enabled: bool = True
+    label_time_enabled: bool = True
+    label_temp_enabled: bool = False
+    label_dta_enabled: bool = False
+
+
+class PeakStateModel(BaseModel):
+    t1: float
+    t2: float
+    baseline_type: int = 0
+    label_enabled: bool = True
+    onsets: list[OnsetStateModel] = Field(default_factory=list)
+
+
+class CurveStateModel(BaseModel):
+    color: str = "#0284c7"
+    dy: float = 0.0
+    visible: bool = True
+    peaks: list[PeakStateModel] = Field(default_factory=list)
+
+
+class SegmentStateModel(BaseModel):
+    color: str = "#0284c7"
+    dy: float = 0.0
+    peaks: list[PeakStateModel] = Field(default_factory=list)
+    curves: dict[str, CurveStateModel] = Field(default_factory=dict)
+
+
+class DerivativeSpecModel(BaseModel):
+    y_col: str
+    x_col: str
+    order: int = 1
+
+
+class AnalysisStateModel(BaseModel):
+    """Типизированный контракт состояния проекта анализа .fusa."""
+
+    deriv_channel: str = "DTA"
+    split_times: list[float] = Field(default_factory=list)
+    smoothing_windows: dict[str, int] = Field(default_factory=dict)
+    computed_derivatives: list[DerivativeSpecModel] = Field(default_factory=list)
+    segments: list[SegmentStateModel] = Field(default_factory=list)
 
 
 class ChannelDescriptor(BaseModel):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from enum import StrEnum
 from typing import Annotated, Literal
 
 import numpy as np
@@ -9,7 +10,15 @@ from pydantic import BaseModel, Field, field_validator
 
 from fusion_common.thermometry import CjcData, SensorSpec
 
-CalibrationKind = Literal["offset", "linear", "quadratic", "piecewise"]
+
+class CalibrationType(StrEnum):
+    OFFSET = "offset"
+    LINEAR = "linear"
+    QUADRATIC = "quadratic"
+    PIECEWISE = "piecewise"
+
+
+CalibrationKind = CalibrationType
 
 
 class Standard(BaseModel):
@@ -38,34 +47,36 @@ class CalibrationStats(BaseModel):
 
 def calculate_coefficients(
     standards: Sequence[Standard],
-    calibration_type: str = "linear",
+    calibration_type: CalibrationType | str = CalibrationType.LINEAR,
 ) -> list[float]:
     """Рассчитывает коэффициенты [a, b, c] аддитивной поправки delta_T(T_exp)."""
-    if calibration_type not in ("offset", "linear", "quadratic", "piecewise"):
+    try:
+        cal_kind = CalibrationType(calibration_type)
+    except ValueError as exc:
         raise ValueError(
             "Тип калибровки должен быть 'offset', 'linear', 'quadratic' или 'piecewise'"
-        )
+        ) from exc
 
     min_points = (
         1
-        if calibration_type == "offset"
-        else (3 if calibration_type == "quadratic" else 2)
+        if cal_kind is CalibrationType.OFFSET
+        else (3 if cal_kind is CalibrationType.QUADRATIC else 2)
     )
     if len(standards) < min_points:
         raise ValueError(
-            f"Для расчёта {calibration_type} калибровки требуется минимум {min_points} стандарта"
+            f"Для расчёта {cal_kind} калибровки требуется минимум {min_points} стандарта"
         )
 
     t_exp = np.array([s.t_exp for s in standards], dtype=float)
     if min_points > 1 and len(np.unique(t_exp)) < min_points:
         raise ValueError(
-            f"Для расчёта {calibration_type} калибровки требуется минимум {min_points} стандарта с различными температурами"
+            f"Для расчёта {cal_kind} калибровки требуется минимум {min_points} стандарта с различными температурами"
         )
 
     delta_t = np.array([s.t_theor - s.t_exp for s in standards], dtype=float)
-    if calibration_type == "offset":
+    if cal_kind is CalibrationType.OFFSET:
         return [0.0, float(np.mean(delta_t)), 0.0]
-    if calibration_type in ("linear", "piecewise"):
+    if cal_kind in (CalibrationType.LINEAR, CalibrationType.PIECEWISE):
         c_a, c_b = np.polyfit(t_exp, delta_t, 1)  # noqa: PU001
         return [float(c_a), float(c_b), 0.0]
 
@@ -93,7 +104,7 @@ class AdditivePolynomialCalibration(BaseModel):
     """Аддитивная калибровка температуры по реперным веществам: T_corr = T_exp + delta_T(T_exp)."""
 
     kind: Literal["additive_polynomial"] = "additive_polynomial"
-    calibration_type: CalibrationKind = "linear"
+    calibration_type: CalibrationType = CalibrationType.LINEAR
     coefficients: list[float] = Field(default_factory=lambda: [0.0, 0.0, 0.0])
     name: str = ""
     description: str = ""
@@ -117,14 +128,15 @@ class AdditivePolynomialCalibration(BaseModel):
         cls,
         name: str,
         standards: Sequence[Standard],
-        calibration_type: CalibrationKind = "linear",
+        calibration_type: CalibrationType | str = CalibrationType.LINEAR,
         description: str = "",
     ) -> AdditivePolynomialCalibration:
-        coeffs = calculate_coefficients(standards, calibration_type)
+        cal_kind = CalibrationType(calibration_type)
+        coeffs = calculate_coefficients(standards, cal_kind)
         return cls(
             name=name,
             description=description,
-            calibration_type=calibration_type,
+            calibration_type=cal_kind,
             coefficients=coeffs,
             standards=list(standards),
         )
