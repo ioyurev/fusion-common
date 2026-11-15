@@ -7,8 +7,10 @@ import io
 import struct
 import sys
 import tomllib
+import traceback
 from collections import deque
 from pathlib import Path
+from types import TracebackType
 from typing import TextIO
 
 from loguru import logger
@@ -31,6 +33,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPlainTextEdit,
     QPushButton,
     QSplashScreen,
@@ -483,8 +486,31 @@ class _ConsoleRedirectStream(io.TextIOBase):
                 self._orig.flush()
 
 
+def _gui_excepthook(
+    exc_type: type[BaseException],
+    exc_value: BaseException,
+    exc_tb: TracebackType | None,
+) -> None:
+    """Перехватывает все необработанные исключения, пишет их в лог и показывает QMessageBox в GUI."""
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_tb)
+        return
+    tb_text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+    logger.opt(exception=(exc_type, exc_value, exc_tb)).error(
+        "Unhandled exception in application"
+    )
+    app = QApplication.instance()
+    if isinstance(app, QApplication):
+        box = QMessageBox()
+        box.setIcon(QMessageBox.Icon.Critical)
+        box.setWindowTitle("Ошибка выполнения")
+        box.setText(f"Произошла ошибка:\n{exc_type.__name__}: {exc_value}")
+        box.setDetailedText(tb_text)
+        box.exec()
+
+
 def setup_fusion_logging(appdata_path: Path) -> Path:
-    """Настраивает запись loguru и перехват stdout/stderr в лог-файл и буфер GUI."""
+    """Настраивает запись loguru, перехват stdout/stderr и GUI-показ необработанных исключений."""
     log_dir = appdata_path / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     logger.remove()
@@ -509,6 +535,7 @@ def setup_fusion_logging(appdata_path: Path) -> Path:
         sys.stderr = _ConsoleRedirectStream(  # type: ignore[assignment]
             orig_err, is_err=True
         )
+    sys.excepthook = _gui_excepthook
     return log_dir
 
 
