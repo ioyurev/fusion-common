@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.resources
+import struct
 import sys
 import tomllib
 from pathlib import Path
@@ -202,7 +203,18 @@ def generate_splash_png(
     if icon_output_path is not None:
         icon_output_path.parent.mkdir(parents=True, exist_ok=True)
         icon_img = render_app_icon_image(bg_color=icon_bg_color, size=256)
-        icon_img.save(str(icon_output_path), "PNG")  # type: ignore[call-overload,arg-type]
+        if icon_output_path.suffix.lower() == ".ico":
+            buf = QByteArray()
+            qbuf = QtCore.QBuffer(buf)
+            qbuf.open(QtCore.QIODevice.OpenModeFlag.WriteOnly)
+            icon_img.save(qbuf, "PNG")  # type: ignore[call-overload]
+            png_bytes = bytes(buf.data())
+            ico_hdr = struct.pack(
+                "<HHHBBBBHHII", 0, 1, 1, 0, 0, 0, 0, 1, 32, len(png_bytes), 22
+            )
+            icon_output_path.write_bytes(ico_hdr + png_bytes)
+        else:
+            icon_img.save(str(icon_output_path), "PNG")  # type: ignore[call-overload,arg-type]
 
 
 def show_startup_splash(
