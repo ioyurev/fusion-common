@@ -1,6 +1,6 @@
 # Стандартная общественная лицензия GNU (GNU GPL) v3.0
 
-**Авторские права (C) 2024–2026 Юрьев Илья Олегович (<i.o.yurev@yandex.ru>)**
+**Авторские права (C) 2024--2026 Юрьев Илья Олегович (<i.o.yurev@yandex.ru>)**
 
 Данная программа является свободным программным обеспечением. Вы вправе
 распространять её и/или модифицировать в соответствии с условиями **Стандартной
@@ -16,6 +16,6 @@ Foundation).
 сопровождаться открытием полного исходного кода всех изменений под той же
 лицензией GNU GPL v3.0.
 
-- **Официальная страница лицензии GNU GPL v3.0:** [https://www.gnu.org/licenses/gpl-3.0.ru.html](https://www.gnu.org/licenses/gpl-3.0.ru.html)
-- **Официальный оригинал на английском языке:** [https://www.gnu.org/licenses/gpl-3.0.html](https://www.gnu.org/licenses/gpl-3.0.html)
+- **Официальная страница лицензии GNU GPL v3.0:** <https://www.gnu.org/licenses/gpl-3.0.ru.html>
+- **Официальный оригинал на английском языке:** <https://www.gnu.org/licenses/gpl-3.0.html>
 - **SPDX-License-Identifier:** `GPL-3.0-or-later`

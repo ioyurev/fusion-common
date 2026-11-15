@@ -40,6 +40,7 @@ from fusion_common.models import (
     MeasurementRecord,
 )
 from fusion_common.packaging import (
+    build_inno_setup_installer,
     get_appdata_path,
     make_dist_zip,
     write_pyinstaller_version_file,
@@ -107,6 +108,7 @@ __all__ = [
     "__version__",
     "bisection_method",
     "build_dist_docs_html",
+    "build_inno_setup_installer",
     "calculate_coefficients",
     "eval_polynomial_asc",
     "evaluate_channel_temperature",

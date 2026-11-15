@@ -1,0 +1,10 @@
+flavor = "quarto"
+
+[format]
+line-width = 80
+wrap = "preserve"
+
+[lint.rules]
+undefined-references = false
+swallowed-list-marker = false
+citation-nonbreaking-space = false

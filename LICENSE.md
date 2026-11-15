@@ -11,6 +11,6 @@ This program is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-- **Full English license text:** [https://www.gnu.org/licenses/gpl-3.0.html](https://www.gnu.org/licenses/gpl-3.0.html)
-- **Официальная страница лицензии GNU GPL v3.0:** [https://www.gnu.org/licenses/gpl-3.0.ru.html](https://www.gnu.org/licenses/gpl-3.0.ru.html)
+- **Full English license text:** <https://www.gnu.org/licenses/gpl-3.0.html>
+- **Официальная страница лицензии GNU GPL v3.0:** <https://www.gnu.org/licenses/gpl-3.0.ru.html>
 - **SPDX-License-Identifier:** `GPL-3.0-or-later`

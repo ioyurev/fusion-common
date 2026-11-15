@@ -306,36 +306,9 @@ class FusionAboutDialog(QDialog):
         lbl_body.setOpenExternalLinks(True)
         layout.addWidget(lbl_body)
 
-        from PySide6.QtWidgets import QHBoxLayout
-
-        from fusion_common.docs_viewer import show_fusion_docs, show_fusion_license
-
-        pkg_name = repo_slug.replace("-", "_")
-        btns_row = QHBoxLayout()
-        btn_docs = QPushButton("Руководство пользователя")
-        btn_docs.clicked.connect(
-            lambda: show_fusion_docs(
-                app_title=app_title,
-                package_name=pkg_name,
-                icon_bg_color=icon_bg_color,
-                parent=self,
-            )
-        )
-        btn_lic = QPushButton("Лицензия GNU GPL v3.0")
-        btn_lic.clicked.connect(
-            lambda: show_fusion_license(
-                app_title=app_title,
-                icon_bg_color=icon_bg_color,
-                parent=self,
-            )
-        )
         btn_close = QPushButton("Закрыть")
         btn_close.clicked.connect(self.accept)
-        btns_row.addWidget(btn_docs)
-        btns_row.addWidget(btn_lic)
-        btns_row.addStretch()
-        btns_row.addWidget(btn_close)
-        layout.addLayout(btns_row)
+        layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignRight)
 
 
 def show_fusion_about(

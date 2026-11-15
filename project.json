@@ -55,6 +55,7 @@
         "pyproject.toml",
         "mypy.ini",
         "vulture_whitelist.py",
+        ".panache.toml",
         ".pre-commit-config.yaml",
         ".gitignore"
       ],
