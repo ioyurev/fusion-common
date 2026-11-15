@@ -57,6 +57,7 @@
         "vulture_whitelist.py",
         ".panache.toml",
         ".pre-commit-config.yaml",
+        ".gitattributes",
         ".gitignore"
       ],
       "default": false,
