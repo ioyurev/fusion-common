@@ -9,6 +9,7 @@ import sys
 import tomllib
 import traceback
 from collections import deque
+from functools import lru_cache
 from pathlib import Path
 from types import TracebackType
 from typing import TextIO
@@ -77,6 +78,7 @@ def get_pyproject_version(root_path: Path) -> str:
     return f"v{ver}"
 
 
+@lru_cache(maxsize=64)
 def resolve_ui_icon(
     theme_icon: QIcon.ThemeIcon,
     fallback_pixmap: QStyle.StandardPixmap | None = None,

@@ -9,12 +9,15 @@ def eval_polynomial_asc(
     coeffs_asc: Sequence[float],
     x: float | np.ndarray,
 ) -> float | np.ndarray:
-    """Вычисляет полином c0 + c1*x + ... + ck*x^k (коэффициенты по возрастанию степени)."""
-    coeffs_desc = list(coeffs_asc)[::-1]
-    res = np.polyval(coeffs_desc, x)
+    """Вычисляет полином c0 + c1*x + ... + ck*x^k (для скаляра — быстрая схема Горнера без np.polyval)."""
     if isinstance(x, (int, float)):
-        return float(res)
-    return np.asarray(res, dtype=float)
+        x_f = float(x)
+        acc = 0.0
+        for coeff in reversed(coeffs_asc):
+            acc = acc * x_f + coeff
+        return acc
+    coeffs_desc = list(coeffs_asc)[::-1]
+    return np.asarray(np.polyval(coeffs_desc, x), dtype=float)
 
 
 def bisection_method(
