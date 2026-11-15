@@ -151,6 +151,12 @@ class AdditivePolynomialCalibration(BaseModel):
                 dtype=float,
             )
             return np.interp(t_exp, x_pts, y_pts)
+        if isinstance(t_exp, (int, float)):
+            c0, c1, c2, *_ = self.coefficients
+            t_f = float(t_exp)
+            if self.calibration_type in ("offset", "linear", "piecewise"):
+                return c0 * t_f + c1
+            return (c0 * t_f + c1) * t_f + c2
         return np.polyval(self._poly_desc(), t_exp)
 
     def apply(self, t_exp: float | np.ndarray) -> float | np.ndarray:
@@ -235,10 +241,13 @@ class DirectPolynomialCalibration(BaseModel):
     coefficients_desc: list[float] = Field(min_length=1)
 
     def apply(self, x: float | np.ndarray) -> float | np.ndarray:
-        res = np.polyval(self.coefficients_desc, x)
         if isinstance(x, (int, float)):
-            return float(res)
-        return np.asarray(res, dtype=float)
+            x_f = float(x)
+            acc = 0.0
+            for coeff in self.coefficients_desc:
+                acc = acc * x_f + coeff
+            return acc
+        return np.asarray(np.polyval(self.coefficients_desc, x), dtype=float)
 
     def to_formula_str(self) -> str:
         return f"T = polyval({self.coefficients_desc})"
