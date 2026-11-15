@@ -252,6 +252,8 @@ def test_splash_rendering_qimage(tmp_path: Path) -> None:
     )
     assert out_png.exists() and out_png.stat().st_size > 1000
     assert icon_png.exists() and icon_png.stat().st_size > 1000
+    assert (tmp_path / "wizard_large.bmp").exists()
+    assert (tmp_path / "wizard_small.bmp").exists()
 
 
 def test_packaging_helpers(tmp_path: Path) -> None:

@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib.resources
+import io
 import struct
 import sys
 import tomllib
+from collections import deque
 from pathlib import Path
+from typing import TextIO
 
 from loguru import logger
-from PySide6 import QtCore
-from PySide6.QtCore import QByteArray, QRectF, Qt
+from PySide6 import QtCore, QtGui
+from PySide6.QtCore import QByteArray, QRectF, Qt, QUrl
 from PySide6.QtGui import (
     QBrush,
     QColor,
+    QDesktopServices,
     QFont,
     QIcon,
     QImage,
@@ -24,7 +29,9 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
+    QHBoxLayout,
     QLabel,
+    QPlainTextEdit,
     QPushButton,
     QSplashScreen,
     QVBoxLayout,
@@ -178,6 +185,68 @@ def render_splash_image(
     return img
 
 
+def generate_wizard_bmp_images(
+    subtitle: str,
+    version_str: str,
+    icon_bg_color: str,
+    large_out_path: Path,
+    small_out_path: Path,
+    title: str = "Fusion",
+) -> None:
+    """Генерирует фирменные 24-битные BMP-изображения (328x628 и 110x110) для мастера Inno Setup 6."""
+    w_l, h_l = 328, 628
+    large_img = QImage(w_l, h_l, QImage.Format.Format_RGB888)
+    p_l = QPainter(large_img)
+    p_l.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p_l.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+    grad = QLinearGradient(0, 0, w_l, h_l)
+    grad.setColorAt(0.0, QColor("#0F172A"))
+    grad.setColorAt(1.0, QColor("#1E3A8A"))
+    p_l.fillRect(0, 0, w_l, h_l, QBrush(grad))
+
+    ico_sz = 180
+    icon_img = render_app_icon_image(bg_color=icon_bg_color, size=ico_sz)
+    p_l.drawImage(
+        QRectF((w_l - ico_sz) / 2, 90, ico_sz, ico_sz),
+        icon_img,
+    )
+    p_l.setPen(QColor("white"))
+    p_l.setFont(QFont("Segoe UI", 32, QFont.Weight.Bold))
+    p_l.drawText(
+        QRectF(0, 290, w_l, 55),
+        Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter,
+        title,
+    )
+    p_l.setPen(QColor("#CBD5E1"))
+    p_l.setFont(QFont("Segoe UI", 11))
+    p_l.drawText(
+        QRectF(16, 350, w_l - 32, 48),
+        Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop,
+        subtitle,
+    )
+    v_text = version_str if version_str.startswith("v") else f"v{version_str}"
+    p_l.setFont(QFont("Consolas", 10))
+    p_l.drawText(
+        QRectF(0, h_l - 44, w_l, 28),
+        Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter,
+        v_text,
+    )
+    p_l.end()
+    large_out_path.parent.mkdir(parents=True, exist_ok=True)
+    large_img.save(str(large_out_path), "BMP")  # type: ignore[call-overload,arg-type]
+
+    sz_s = 110
+    small_img = QImage(sz_s, sz_s, QImage.Format.Format_RGB888)
+    small_img.fill(QColor("#FFFFFF"))
+    p_s = QPainter(small_img)
+    p_s.setRenderHint(QPainter.RenderHint.Antialiasing)
+    ico_s = render_app_icon_image(bg_color=icon_bg_color, size=98)
+    p_s.drawImage(QRectF(6, 6, 98, 98), ico_s)
+    p_s.end()
+    small_out_path.parent.mkdir(parents=True, exist_ok=True)
+    small_img.save(str(small_out_path), "BMP")  # type: ignore[call-overload,arg-type]
+
+
 def generate_splash_png(
     svg_path: Path | None,
     output_path: Path,
@@ -187,7 +256,7 @@ def generate_splash_png(
     icon_bg_color: str = ANALYSIS_ICON_BG,
     icon_output_path: Path | None = None,
 ) -> None:
-    """Генерирует и сохраняет splash.png (и опционально icon.png) для упаковки PyInstaller."""
+    """Генерирует и сохраняет splash.png, icon.ico и изображения мастера инсталлятора."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     logger.bind(version=version_str, output=str(output_path)).info(
         "Generating Splash PNG"
@@ -200,6 +269,14 @@ def generate_splash_png(
         icon_bg_color=icon_bg_color,
     )
     img.save(str(output_path), "PNG")  # type: ignore[call-overload,arg-type]
+    generate_wizard_bmp_images(
+        subtitle=subtitle,
+        version_str=version_str,
+        icon_bg_color=icon_bg_color,
+        large_out_path=output_path.parent / "wizard_large.bmp",
+        small_out_path=output_path.parent / "wizard_small.bmp",
+        title=title,
+    )
     if icon_output_path is not None:
         icon_output_path.parent.mkdir(parents=True, exist_ok=True)
         icon_img = render_app_icon_image(bg_color=icon_bg_color, size=256)
@@ -324,6 +401,157 @@ def show_fusion_about(
         version_str=version_str,
         description=description,
         repo_slug=repo_slug,
+        icon_bg_color=icon_bg_color,
+        parent=parent,
+    ).exec()
+
+
+class _LogMemoryStore(QtCore.QObject):
+    line_added = QtCore.Signal(str)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.lines: deque[str] = deque(maxlen=2000)
+
+    def append(self, line: str) -> None:
+        self.lines.append(line)
+        with contextlib.suppress(RuntimeError):
+            self.line_added.emit(line)
+
+    def clear(self) -> None:
+        self.lines.clear()
+
+
+_LOG_STORE = _LogMemoryStore()
+
+
+class _ConsoleRedirectStream(io.TextIOBase):
+    """Перехватывает запись в stdout/stderr, перенаправляя строки в loguru и оригинальный поток."""
+
+    def __init__(self, orig_stream: TextIO | None, is_err: bool = False) -> None:
+        super().__init__()
+        self._orig = orig_stream
+        self._is_err = is_err
+        self._buf = ""
+
+    def write(self, s: str) -> int:
+        if not s:
+            return 0
+        if self._orig is not None:
+            with contextlib.suppress(OSError, ValueError):
+                self._orig.write(s)
+                self._orig.flush()
+        self._buf += s
+        while "\n" in self._buf:
+            line, self._buf = self._buf.split("\n", 1)  # noqa: PU001
+            clean = line.rstrip("\r")
+            if clean.strip():
+                if self._is_err:
+                    logger.opt(depth=1).warning(clean)
+                else:
+                    logger.opt(depth=1).info(clean)
+        return len(s)
+
+    def flush(self) -> None:
+        if self._orig is not None:
+            with contextlib.suppress(OSError, ValueError):
+                self._orig.flush()
+
+
+def setup_fusion_logging(appdata_path: Path) -> Path:
+    """Настраивает запись loguru и перехват stdout/stderr в лог-файл и буфер GUI."""
+    log_dir = appdata_path / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    logger.remove()
+    orig_err = getattr(sys, "__stderr__", None)
+    if orig_err is not None and not getattr(sys, "frozen", False):
+        logger.add(orig_err, level="INFO")
+    logger.add(
+        log_dir / "{time}.log",
+        rotation="1 week",
+        retention="1 month",
+        encoding="utf-8",
+    )
+    logger.add(
+        lambda msg: _LOG_STORE.append(str(msg).rstrip("\r\n")),
+        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
+    )
+    if not isinstance(sys.stdout, _ConsoleRedirectStream):
+        sys.stdout = _ConsoleRedirectStream(  # type: ignore[assignment]
+            getattr(sys, "__stdout__", None), is_err=False
+        )
+    if not isinstance(sys.stderr, _ConsoleRedirectStream):
+        sys.stderr = _ConsoleRedirectStream(  # type: ignore[assignment]
+            orig_err, is_err=True
+        )
+    return log_dir
+
+
+class FusionLogViewerDialog(QDialog):
+    """Окно просмотра живого журнала работы и вывода консоли внутри GUI."""
+
+    def __init__(
+        self,
+        app_title: str,
+        appdata_path: Path,
+        icon_bg_color: str = ANALYSIS_ICON_BG,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(f"Журнал работы — {app_title}")
+        self.resize(880, 520)
+        self.setWindowIcon(QIcon(render_app_icon_pixmap(icon_bg_color, 64)))
+        self.log_dir = appdata_path / "logs"
+
+        layout = QVBoxLayout(self)
+        self.text_edit = QPlainTextEdit()
+        self.text_edit.setReadOnly(True)
+        self.text_edit.setFont(QFont("Consolas", 10))
+        self.text_edit.setPlainText("\n".join(_LOG_STORE.lines))
+        self.text_edit.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        layout.addWidget(self.text_edit, 1)
+
+        btn_row = QHBoxLayout()
+        btn_copy = QPushButton("Копировать всё")
+        btn_clear = QPushButton("Очистить экран")
+        btn_folder = QPushButton("Открыть папку логов")
+        btn_close = QPushButton("Закрыть")
+
+        btn_copy.clicked.connect(
+            lambda: QApplication.clipboard().setText(self.text_edit.toPlainText())
+        )
+        btn_clear.clicked.connect(self._on_clear)
+        btn_folder.clicked.connect(
+            lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.log_dir)))
+        )
+        btn_close.clicked.connect(self.accept)
+
+        btn_row.addWidget(btn_copy)
+        btn_row.addWidget(btn_clear)
+        btn_row.addWidget(btn_folder)
+        btn_row.addStretch()
+        btn_row.addWidget(btn_close)
+        layout.addLayout(btn_row)
+
+        _LOG_STORE.line_added.connect(self._on_line_added)
+
+    def _on_line_added(self, line: str) -> None:
+        self.text_edit.appendPlainText(line)
+
+    def _on_clear(self) -> None:
+        _LOG_STORE.clear()
+        self.text_edit.clear()
+
+
+def show_fusion_logs(
+    app_title: str,
+    appdata_path: Path,
+    icon_bg_color: str = ANALYSIS_ICON_BG,
+    parent: QWidget | None = None,
+) -> None:
+    FusionLogViewerDialog(
+        app_title=app_title,
+        appdata_path=appdata_path,
         icon_bg_color=icon_bg_color,
         parent=parent,
     ).exec()

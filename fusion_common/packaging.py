@@ -121,6 +121,12 @@ def build_inno_setup_installer(
     setup_icon_line = (
         f"SetupIconFile={resolved_icon}\n" if resolved_icon.is_file() else ""
     )
+    wiz_large = (icon_path.parent / "wizard_large.bmp").resolve()
+    wiz_small = (icon_path.parent / "wizard_small.bmp").resolve()
+    wiz_large_line = f"WizardImageFile={wiz_large}\n" if wiz_large.is_file() else ""
+    wiz_small_line = (
+        f"WizardSmallImageFile={wiz_small}\n" if wiz_small.is_file() else ""
+    )
 
     iss_content = (
         f"[Setup]\n"
@@ -135,6 +141,8 @@ def build_inno_setup_installer(
         f"OutputDir={out_dir}\n"
         f"OutputBaseFilename={setup_base}\n"
         f"{setup_icon_line}"
+        f"{wiz_large_line}"
+        f"{wiz_small_line}"
         f"UninstallDisplayIcon={{app}}\\{package_name}.exe\n"
         f"Compression=lzma2/ultra64\n"
         f"SolidCompression=yes\n"
