@@ -208,14 +208,13 @@ def test_multi_thermocouple_fus_roundtrip(tmp_path: Path) -> None:
         source_column="dta_1_2",
         smoothed_values=smoothed,
         smoothing_window=3,
-        target_column="dta_smoothed",
     )
     save_fus(loaded, fus_path)
 
     reloaded = load_fus(fus_path)
     raw_ch = reloaded.get_channel("dta_1_2")
-    sm_ch = reloaded.get_channel("dta_smoothed")
-    sm_desc = reloaded.get_descriptor("dta_smoothed")
+    sm_ch = reloaded.get_channel("dta_1_2__smoothed")
+    sm_desc = reloaded.get_descriptor("dta_1_2__smoothed")
     assert raw_ch is not None and np.allclose(raw_ch, dta_1_2)
     assert sm_ch is not None and np.allclose(sm_ch, smoothed)
     assert sm_desc is not None and sm_desc.metadata.get("smoothing_window") == 3

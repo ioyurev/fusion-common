@@ -17,11 +17,9 @@ class ChannelKey(StrEnum):
     """Канонические имена колонок контейнера .fus / .fusa."""
 
     TIME = "time"
-    EMF = "emf"
     EMF_1 = "emf_1"
     EMF_2 = "emf_2"
     DTA = "dta"
-    DTA_SMOOTHED = "dta_smoothed"
     TEMPERATURE = "temperature"
     MASS = "mass"
     HEATER_OUTPUT = "heater_output"
@@ -153,11 +151,7 @@ class MeasurementRecord:
     ) -> None:
         """Неразрушающе добавляет или обновляет сглаженный канал внутри этой же записи."""
         if target_column is None:
-            target_column = (
-                "dta_smoothed"
-                if source_column == "dta"
-                else f"{source_column}__smoothed"
-            )
+            target_column = f"{source_column}__smoothed"
         src_desc = self.get_descriptor(source_column)
         base_label = src_desc.label if src_desc is not None else source_column
         if label is None:
