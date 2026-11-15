@@ -269,3 +269,16 @@ def test_packaging_helpers(tmp_path: Path) -> None:
     )
     assert v_file.exists()
     assert get_appdata_path("fusion-test").exists()
+
+    from fusion_common.docs_viewer import _strip_nav_block
+
+    sample_md = (
+        "# 1. Заголовок\n\nВведение.\n\n"
+        "Навигация по руководству:\n- [2. Глава](02.md)\n\n"
+        + ("-" * 80)
+        + "\n\n## 1.1. Подраздел\n\nОсновной текст подраздела."
+    )
+    stripped = _strip_nav_block(sample_md)
+    assert "Навигация по руководству:" not in stripped
+    assert "## 1.1. Подраздел" in stripped
+    assert "Основной текст подраздела." in stripped

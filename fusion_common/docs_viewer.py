@@ -163,11 +163,12 @@ def _strip_nav_block(md_text: str) -> str:
     out: list[str] = []
     skipping = False
     for line in lines:
-        if line.strip().startswith("Навигация по руководству:"):
+        stripped = line.strip()
+        if stripped.startswith("Навигация по руководству:"):
             skipping = True
             continue
         if skipping:
-            if line.strip() == "---":
+            if re.match(r"^[-*_]{3,}$", stripped):
                 skipping = False
             continue
         out.append(line)
