@@ -377,13 +377,30 @@ class FusionAboutDialog(QDialog):
         description: str,
         repo_slug: str,
         icon_bg_color: str = ANALYSIS_ICON_BG,
-        zenodo_doi: str = "10.5281/zenodo.XXXXXXX",
+        zenodo_doi: str = "",
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(f"О программе {app_title}")
-        self.resize(500, 390)
+        self.resize(540, 420)
         self.setWindowIcon(QIcon(render_app_icon_pixmap(icon_bg_color, 64)))
+
+        clean_ver = version_str.lstrip("v")
+        has_real_doi = bool(zenodo_doi and "XXXX" not in zenodo_doi)
+        citation_url = (
+            f"https://doi.org/{zenodo_doi}"
+            if has_real_doi
+            else f"https://github.com/ioyurev/{repo_slug}"
+        )
+        self.citation_text = (
+            f"Yurev, I. O. (2026). {app_title} (Version {clean_ver}) "
+            f"[Computer software]. {citation_url}"
+        )
+        doi_line = (
+            f'<br>• DOI (Zenodo): <a href="https://doi.org/{zenodo_doi}">{zenodo_doi}</a>'
+            if has_real_doi
+            else ""
+        )
 
         layout = QVBoxLayout(self)
         lbl_icon = QLabel()
@@ -397,16 +414,32 @@ class FusionAboutDialog(QDialog):
         )
         html_text = tpl.format(
             app_title=app_title,
-            version=version_str.lstrip("v"),
+            version=clean_ver,
             description=description,
             repo_slug=repo_slug,
-            zenodo_doi=zenodo_doi,
+            doi_line=doi_line,
+            citation_text=self.citation_text,
         )
         lbl_body = QLabel(html_text)
         lbl_body.setWordWrap(True)
         lbl_body.setOpenExternalLinks(True)
+        lbl_body.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextBrowserInteraction
+            | Qt.TextInteractionFlag.TextSelectableByKeyboard
+        )
         layout.addWidget(lbl_body)
 
+        btn_row = QHBoxLayout()
+        btn_copy = QPushButton("Копировать ссылку для цитирования")
+        btn_copy.setIcon(
+            resolve_ui_icon(
+                QIcon.ThemeIcon.EditCopy,
+                QStyle.StandardPixmap.SP_FileDialogDetailedView,
+            )
+        )
+        btn_copy.clicked.connect(
+            lambda: QApplication.clipboard().setText(self.citation_text)
+        )
         btn_close = QPushButton("Закрыть")
         btn_close.setIcon(
             resolve_ui_icon(
@@ -415,7 +448,10 @@ class FusionAboutDialog(QDialog):
             )
         )
         btn_close.clicked.connect(self.accept)
-        layout.addWidget(btn_close, alignment=Qt.AlignmentFlag.AlignRight)
+        btn_row.addWidget(btn_copy)
+        btn_row.addStretch()
+        btn_row.addWidget(btn_close)
+        layout.addLayout(btn_row)
 
 
 def show_fusion_about(
@@ -424,6 +460,7 @@ def show_fusion_about(
     description: str,
     repo_slug: str,
     icon_bg_color: str = ANALYSIS_ICON_BG,
+    zenodo_doi: str = "",
     parent: QWidget | None = None,
 ) -> None:
     FusionAboutDialog(
@@ -432,6 +469,7 @@ def show_fusion_about(
         description=description,
         repo_slug=repo_slug,
         icon_bg_color=icon_bg_color,
+        zenodo_doi=zenodo_doi,
         parent=parent,
     ).exec()
 
