@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import importlib.resources
 import io
+import platform
 import struct
 import sys
 import tomllib
@@ -12,7 +13,10 @@ from collections import deque
 from functools import lru_cache
 from pathlib import Path
 from types import TracebackType
-from typing import TextIO
+from typing import TYPE_CHECKING, Any, TextIO
+
+if TYPE_CHECKING:
+    from loguru import Record
 
 from loguru import logger
 from PySide6 import QtCore, QtGui
@@ -549,6 +553,24 @@ def _gui_excepthook(
         box.exec()
 
 
+def _format_log_record(record: Record) -> str:
+    """Форматирует запись loguru с обязательным выводом всех полей extra и полного traceback."""
+    extra_dict: dict[str, Any] = record.get("extra", {})  # type: ignore[assignment]
+    extra_part = ""
+    if extra_dict:
+        pairs = ", ".join(f"{k}={extra_dict[k]!r}" for k in sorted(extra_dict))
+        extra_part = f" | {pairs}"
+    fmt = (
+        "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | "
+        "{name}:{function}:{line} - {message}"
+        + extra_part.replace("{", "{{").replace("}", "}}")
+        + "\n"
+    )
+    if record.get("exception") is not None:
+        fmt += "{exception}\n"
+    return fmt
+
+
 def setup_fusion_logging(appdata_path: Path) -> Path:
     """Настраивает запись loguru, перехват stdout/stderr и GUI-показ необработанных исключений."""
     log_dir = appdata_path / "logs"
@@ -556,16 +578,29 @@ def setup_fusion_logging(appdata_path: Path) -> Path:
     logger.remove()
     orig_err = getattr(sys, "__stderr__", None)
     if orig_err is not None and not getattr(sys, "frozen", False):
-        logger.add(orig_err, level="INFO")
+        logger.add(
+            orig_err,
+            level="DEBUG",
+            format=_format_log_record,
+            backtrace=True,
+            diagnose=False,
+        )
     logger.add(
         log_dir / "{time}.log",
+        level="DEBUG",
+        format=_format_log_record,
+        backtrace=True,
+        diagnose=False,
         rotation="1 week",
         retention="1 month",
         encoding="utf-8",
     )
     logger.add(
         lambda msg: _LOG_STORE.append(str(msg).rstrip("\r\n")),
-        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
+        level="DEBUG",
+        format=_format_log_record,
+        backtrace=True,
+        diagnose=False,
     )
     if not isinstance(sys.stdout, _ConsoleRedirectStream):
         sys.stdout = _ConsoleRedirectStream(  # type: ignore[assignment]
@@ -576,6 +611,12 @@ def setup_fusion_logging(appdata_path: Path) -> Path:
             orig_err, is_err=True
         )
     sys.excepthook = _gui_excepthook
+    logger.bind(
+        os=platform.platform(),
+        python=sys.version.split()[0],  # noqa: MI001
+        frozen=bool(getattr(sys, "frozen", False)),
+        appdata=str(appdata_path),
+    ).info("Application logging initialized")
     return log_dir
 
 
