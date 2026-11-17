@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from fusion_common import (
     CURRENT_SCHEMA_VERSION,
     AdditivePolynomialCalibration,
@@ -215,9 +216,12 @@ def test_multi_thermocouple_fus_roundtrip(tmp_path: Path) -> None:
     raw_ch = reloaded.get_channel("dta_1_2")
     sm_ch = reloaded.get_channel("dta_1_2__smoothed")
     sm_desc = reloaded.get_descriptor("dta_1_2__smoothed")
-    assert raw_ch is not None and np.allclose(raw_ch, dta_1_2)
-    assert sm_ch is not None and np.allclose(sm_ch, smoothed)
-    assert sm_desc is not None and sm_desc.metadata.get("smoothing_window") == 3
+    assert raw_ch is not None
+    assert np.allclose(raw_ch, dta_1_2)
+    assert sm_ch is not None
+    assert np.allclose(sm_ch, smoothed)
+    assert sm_desc is not None
+    assert sm_desc.metadata.get("smoothing_window") == 3
 
 
 def test_icon_svg_rendering() -> None:
@@ -225,14 +229,16 @@ def test_icon_svg_rendering() -> None:
 
     svg_icon = Path(__file__).resolve().parent.parent / "assets" / "icon.svg"
     generate_app_icon_svg(COMMON_ICON_BG, svg_icon)
-    assert svg_icon.exists() and "<rect" in svg_icon.read_text(encoding="utf-8")
+    assert svg_icon.exists()
+    assert "<rect" in svg_icon.read_text(encoding="utf-8")
 
 
 def test_splash_rendering_qimage(tmp_path: Path) -> None:
     import sys
 
-    from fusion_common import generate_splash_png, get_pyproject_version
     from PySide6.QtWidgets import QApplication
+
+    from fusion_common import generate_splash_png, get_pyproject_version
 
     _app = QApplication.instance() or QApplication(sys.argv)
     repo_root = Path(__file__).resolve().parents[1]  # noqa: MI001
@@ -249,14 +255,17 @@ def test_splash_rendering_qimage(tmp_path: Path) -> None:
         icon_bg_color="#FD700D",
         icon_output_path=icon_png,
     )
-    assert out_png.exists() and out_png.stat().st_size > 1000
-    assert icon_png.exists() and icon_png.stat().st_size > 1000
+    assert out_png.exists()
+    assert out_png.stat().st_size > 1000
+    assert icon_png.exists()
+    assert icon_png.stat().st_size > 1000
     assert (tmp_path / "wizard_large.bmp").exists()
     assert (tmp_path / "wizard_small.bmp").exists()
 
-    from fusion_common import resolve_ui_icon
     from PySide6.QtGui import QIcon
     from PySide6.QtWidgets import QStyle
+
+    from fusion_common import resolve_ui_icon
 
     ico = resolve_ui_icon(
         QIcon.ThemeIcon.DocumentOpen,

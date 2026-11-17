@@ -3,14 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from pydantic import BaseModel, Field
 
 from fusion_common.calibration import CalibrationSpec
 from fusion_common.thermometry import CjcData, SensorSpec
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class ChannelKey(StrEnum):

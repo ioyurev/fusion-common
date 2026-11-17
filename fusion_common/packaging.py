@@ -15,9 +15,9 @@ from fusion_common.splash import get_pyproject_version
 def get_appdata_path(app_name: str) -> Path:
     """Возвращает каталог данных приложения в профиле пользователя (единый SSOT)."""
     if sys.platform.startswith("linux") or sys.platform.startswith("darwin"):
-        base = os.environ.get("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
+        base = os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
     else:
-        base = os.getenv("APPDATA") or os.path.expanduser("~")
+        base = os.getenv("APPDATA") or str(Path.home())
     path = Path(base) / app_name
     path.mkdir(parents=True, exist_ok=True)
     return path
@@ -32,7 +32,7 @@ def write_pyinstaller_version_file(
 ) -> Path:
     """Генерирует файл ресурса версии Windows для pyi-set_version."""
     clean_ver = version_str.lstrip("v")
-    parts = (clean_ver.split(".") + ["0", "0", "0"])[:4]
+    parts = [*clean_ver.split("."), "0", "0", "0"][:4]
     ver_tuple = ", ".join(str(int(p)) if p.isdigit() else "0" for p in parts)
 
     content = f"""VSVersionInfo(
@@ -85,10 +85,10 @@ def _find_iscc_executable() -> Path | None:
     if from_path:
         return Path(from_path)
     candidates = [
-        Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)"))
+        Path(os.environ.get("PROGRAMFILES(X86)", "C:/Program Files (x86)"))
         / "Inno Setup 6"
         / "ISCC.exe",
-        Path(os.environ.get("ProgramFiles", "C:/Program Files"))
+        Path(os.environ.get("PROGRAMFILES", "C:/Program Files"))
         / "Inno Setup 6"
         / "ISCC.exe",
         Path(os.environ.get("LOCALAPPDATA", ""))

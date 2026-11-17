@@ -12,10 +12,11 @@ import traceback
 from collections import deque
 from functools import lru_cache
 from pathlib import Path
-from types import TracebackType
 from typing import TYPE_CHECKING, Any, TextIO
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from loguru import Record
 
 from loguru import logger

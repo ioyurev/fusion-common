@@ -220,7 +220,7 @@ def _run_pandoc_fragment(markdown_input: str) -> str:
 def build_dist_docs_html(
     package_name: str,
     title: str | None = None,
-    out_dir: Path = Path("."),
+    out_dir: Path = Path(),
 ) -> tuple[Path, Path]:
     """Собирает MANUAL.html (по одному разделу за раз) и LICENSE.html через pandoc в UTF-8."""
     pages = load_package_docs(package_name)

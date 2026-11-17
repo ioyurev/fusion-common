@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
 
-from fusion_common.thermometry import CjcData, SensorSpec
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from fusion_common.thermometry import CjcData, SensorSpec
 
 
 class CalibrationType(StrEnum):

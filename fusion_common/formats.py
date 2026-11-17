@@ -25,7 +25,7 @@ def _serialize_csv(data: dict[str, np.ndarray], columns: list[str]) -> str:
     writer.writerow(columns)
     if columns:
         arrays = [data[col].tolist() for col in columns]
-        for row in zip(*arrays):
+        for row in zip(*arrays, strict=True):
             writer.writerow(row)
     return buf.getvalue()
 
@@ -40,9 +40,12 @@ def parse_csv_columns(text_stream: io.TextIOBase) -> dict[str, np.ndarray]:
     for row in reader:
         if not row:
             continue
-        for b_list, val_str in zip(buckets, row):
+        for b_list, val_str in zip(buckets, row, strict=False):
             b_list.append(float(val_str.strip()))
-    return {name: np.array(vals, dtype=float) for name, vals in zip(col_names, buckets)}
+    return {
+        name: np.array(vals, dtype=float)
+        for name, vals in zip(col_names, buckets, strict=True)
+    }
 
 
 def save_fus(record: MeasurementRecord, path: Path | IO[bytes]) -> None:

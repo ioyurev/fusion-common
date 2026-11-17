@@ -37,3 +37,52 @@ packages = ["fusion_common"]
 [tool.vulture]
 min_confidence = 60
 paths = ["fusion_common", "tests", "vulture_whitelist.py"]
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "ANN401",
+    "C901",
+    "COM812",  # Конфликтует с ruff-format
+    "CPY001",  # Лицензия размещена в LICENSE.md
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D107",
+    "D203",    # Конфликтует с D211
+    "D213",    # Конфликтует с D212
+    "E501",    # Длинные кириллические строки интерфейса и сообщений
+    "EM101",
+    "EM102",
+    "FBT001",
+    "FBT002",
+    "FBT003",
+    "N802",
+    "N803",
+    "N815",
+    "PLC0415", # Ленивые импорты после сплэш-экрана и платформные импорты
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR0917",
+    "PLR2004",
+    "PLW0108",
+    "RUF001",  # Кириллические символы в строках
+    "RUF002",  # Кириллические символы в докстрингах
+    "RUF003",  # Кириллические символы в комментариях
+    "RUF102",  # Маркеры проектных AST-чекеров (# noqa: PU001, # noqa: MI001)
+    "S603",    # Вызовы внешних CLI-утилит (pandoc, iscc, ffmpeg, ffprobe)
+    "S607",
+    "TRY003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["INP001", "S101", "SLF001"]
+"vulture_whitelist.py" = ["INP001"]
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
