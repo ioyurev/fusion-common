@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from zipfile import ZIP_DEFLATED, ZipFile
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from fusion_common import (
     CURRENT_SCHEMA_VERSION,
@@ -11,6 +13,7 @@ from fusion_common import (
     ChannelDescriptor,
     CjcData,
     IdentityCalibration,
+    IncompatibleFileVersionError,
     LookupSplineCalibration,
     LookupSplineSensorModel,
     MeasurementManifest,
@@ -24,6 +27,7 @@ from fusion_common import (
     make_xa_thermocouple,
     migrate_manifest_dict,
     save_fus,
+    validate_manifest_dict,
 )
 
 
@@ -129,8 +133,83 @@ def test_calibration_models_and_statistics() -> None:
 def test_schema_migration_boundary() -> None:
     migrated = migrate_manifest_dict({"schema_version": "0.9", "sample": "Test"})
     assert migrated["schema_version"] == CURRENT_SCHEMA_VERSION
-    with pytest.raises(ValueError, match="Неподдерживаемая версия схемы"):
+
+    with pytest.raises(
+        IncompatibleFileVersionError,
+        match="Обновите программу",
+    ):
+        migrate_manifest_dict(
+            {
+                "schema_version": "2.0",
+                "software_version": "1.0.0",
+                "common_version": "2.0.0",
+            }
+        )
+
+    with pytest.raises(
+        IncompatibleFileVersionError,
+        match="Неподдерживаемая версия схемы",
+    ):
         migrate_manifest_dict({"schema_version": "99.0"})
+
+    with pytest.raises(ValueError, match="Неподдерживаемая версия схемы") as exc_info:
+        migrate_manifest_dict({"schema_version": "0.1"})
+    assert not isinstance(exc_info.value, IncompatibleFileVersionError)
+
+
+def test_validate_manifest_forward_compat_and_newer_kind() -> None:
+    manifest = validate_manifest_dict(
+        {
+            "schema_version": "1.0",
+            "common_version": "99.0.0",
+            "sample": "ForwardSample",
+            "future_extra_field": "ignored-by-old-client",
+        },
+        current_common_version="0.7.3",
+    )
+    assert manifest.sample == "ForwardSample"
+
+    future_kind_payload = {
+        "schema_version": "1.0",
+        "software_version": "2.1.0",
+        "common_version": "99.0.0",
+        "channels": [
+            {
+                "column": "temperature",
+                "label": "T",
+                "unit": "°C",
+                "sensor": {"kind": "future_rtd_pt100", "name": "Pt100"},
+            }
+        ],
+    }
+    with pytest.raises(
+        IncompatibleFileVersionError,
+        match="Обновите программу",
+    ):
+        validate_manifest_dict(future_kind_payload, current_common_version="0.7.3")
+
+    corrupted_old_payload = dict(future_kind_payload, common_version="0.5.0")
+    with pytest.raises(ValidationError):
+        validate_manifest_dict(corrupted_old_payload, current_common_version="0.7.3")
+
+
+def test_load_fus_corrupted_zip_and_missing_members(tmp_path: Path) -> None:
+    stub = tmp_path / "stub.fus"
+    stub.write_bytes(b"\x00")
+    with pytest.raises(ValueError, match="не была завершена"):
+        load_fus(stub)
+
+    no_manifest = tmp_path / "no_manifest.fus"
+    with ZipFile(no_manifest, "w", ZIP_DEFLATED) as zf:
+        zf.writestr("data.csv", "time\n0.0\n")
+    with pytest.raises(ValueError, match=r"отсутствует manifest\.json"):
+        load_fus(no_manifest)
+
+    no_data = tmp_path / "no_data.fus"
+    with ZipFile(no_data, "w", ZIP_DEFLATED) as zf:
+        zf.writestr("manifest.json", MeasurementManifest(sample="S").model_dump_json())
+    with pytest.raises(ValueError, match=r"отсутствует data\.csv"):
+        load_fus(no_data)
 
 
 def test_multi_thermocouple_fus_roundtrip(tmp_path: Path) -> None:
@@ -302,3 +381,32 @@ def test_packaging_helpers(tmp_path: Path) -> None:
     assert "Навигация по руководству:" not in stripped
     assert "## 1.1. Подраздел" in stripped
     assert "Основной текст подраздела." in stripped
+
+
+def test_sequential_log_allocation_and_retention(tmp_path: Path) -> None:
+    from fusion_common.splash import LOG_SEQ_FILENAME, _allocate_log_file
+
+    log_dir = tmp_path / "logs"
+    created: list[Path] = []
+    for expected_idx in range(1, 5):
+        path = _allocate_log_file(log_dir, max_retained=3)
+        assert path.name.startswith(f"{expected_idx:05d}_")
+        path.write_text("entry\n", encoding="utf-8")
+        created.append(path)
+
+    remaining = sorted(p.name for p in log_dir.glob("*.log"))
+    assert len(remaining) == 3
+    assert remaining[0].startswith("00002_")  # noqa: MI001
+    assert remaining[2].startswith("00004_")  # noqa: MI001
+
+    # Очистка папки логов не сбрасывает счётчик при наличии .log_seq
+    for p in log_dir.glob("*.log"):
+        p.unlink()
+    p5 = _allocate_log_file(log_dir, max_retained=3)
+    assert p5.name.startswith("00005_")
+    p5.write_text("entry\n", encoding="utf-8")
+
+    # Удаление .log_seq восстанавливает счётчик по максимальному номеру оставшегося файла
+    (log_dir / LOG_SEQ_FILENAME).unlink()
+    p6 = _allocate_log_file(log_dir, max_retained=3)
+    assert p6.name.startswith("00006_")

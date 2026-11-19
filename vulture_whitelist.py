@@ -20,6 +20,7 @@ from fusion_common import (
     FusionAboutDialog,
     FusionLogViewerDialog,
     IdentityCalibration,
+    IncompatibleFileVersionError,
     LookupSplineCalibration,
     LookupSplineSensorModel,
     MeasurementManifest,
@@ -64,11 +65,12 @@ from fusion_common import (
     show_fusion_license,
     show_fusion_logs,
     show_startup_splash,
+    validate_manifest_dict,
     write_pyinstaller_version_file,
 )
 from fusion_common.calibration import CalibrationKind
 from fusion_common.packaging import main_packaging_cli
-from fusion_common.splash import main_cli
+from fusion_common.splash import _NumberedLogFile, main_cli
 
 _PUBLIC_API = (
     CURRENT_SCHEMA_VERSION,
@@ -117,6 +119,7 @@ _PUBLIC_API = (
     DirectPolynomialCalibration.kind,
     IdentityCalibration,
     IdentityCalibration.kind,
+    IncompatibleFileVersionError,
     LookupSplineCalibration,
     LookupSplineCalibration.kind,
     LookupSplineSensorModel,
@@ -179,6 +182,7 @@ _PUBLIC_API = (
     get_appdata_path,
     get_pyproject_version,
     load_fus,
+    _NumberedLogFile.seq,  # type: ignore[misc]
     main_cli,
     main_packaging_cli,
     make_dist_zip,
@@ -211,5 +215,6 @@ _PUBLIC_API = (
     resolve_ui_icon,
     save_fus,
     show_startup_splash,
+    validate_manifest_dict,
     write_pyinstaller_version_file,
 )

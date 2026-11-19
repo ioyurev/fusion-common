@@ -6,15 +6,12 @@ import json
 from io import StringIO, TextIOWrapper
 from pathlib import Path
 from typing import IO
-from zipfile import ZIP_DEFLATED, ZipFile
+from zipfile import ZIP_DEFLATED, BadZipFile, ZipFile
 
 import numpy as np
 
-from fusion_common.migration import migrate_manifest_dict
-from fusion_common.models import (
-    MeasurementManifest,
-    MeasurementRecord,
-)
+from fusion_common.migration import validate_manifest_dict
+from fusion_common.models import MeasurementRecord
 
 FUS_EXT_FILTER = "Файлы сырых измерений Fusion (*.fus)"
 
@@ -72,14 +69,35 @@ def save_fus(record: MeasurementRecord, path: Path | IO[bytes]) -> None:
 
 
 def load_fus(path: Path) -> MeasurementRecord:
-    """Загружает измерение из контейнера .fus с автоматической миграцией схемы."""
-    with ZipFile(path, "r", ZIP_DEFLATED) as zipf:
-        raw_dict = json.loads(zipf.read("manifest.json").decode("utf-8"))
-        migrated_dict = migrate_manifest_dict(raw_dict)
-        manifest = MeasurementManifest.model_validate(migrated_dict)
-        with zipf.open("data.csv", "r") as bf:
-            text_f = TextIOWrapper(bf, encoding="utf-8")
-            data = parse_csv_columns(text_f)
+    """Загружает измерение из контейнера .fus с миграцией схемы и диагностикой ошибок."""
+    try:
+        with ZipFile(path, "r", ZIP_DEFLATED) as zipf:
+            try:
+                manifest_bytes = zipf.read("manifest.json")
+            except KeyError as exc:
+                raise ValueError(
+                    f"Файл '{path.name}' повреждён: внутри контейнера .fus отсутствует manifest.json"
+                ) from exc
+            try:
+                raw_dict = json.loads(manifest_bytes.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise ValueError(
+                    f"Файл '{path.name}' повреждён: некорректный manifest.json ({exc})"
+                ) from exc
+            manifest = validate_manifest_dict(raw_dict)
+            try:
+                with zipf.open("data.csv", "r") as bf:
+                    text_f = TextIOWrapper(bf, encoding="utf-8")
+                    data = parse_csv_columns(text_f)
+            except KeyError as exc:
+                raise ValueError(
+                    f"Файл '{path.name}' повреждён: внутри контейнера .fus отсутствует data.csv"
+                ) from exc
+    except BadZipFile as exc:
+        raise ValueError(
+            f"Файл '{path.name}' повреждён или запись измерения не была завершена "
+            "(некорректный ZIP-контейнер .fus)"
+        ) from exc
     return MeasurementRecord(
         manifest=manifest,
         data=data,

@@ -1,5 +1,5 @@
 {
-  "title": "Fusion Common — общее ядро термометрии, калибровок и форматов данных (.fus, .vtaz, .tda, .fus-mdt)",
+  "title": "Fusion Common — общее ядро термометрии, калибровок и контейнера .fus / .fusa",
   "priority_patterns": [
     "README.md",
     "AGENTS.md",
@@ -37,7 +37,7 @@
         "fusion_common/assets/*.md"
       ],
       "default": false,
-      "description": "По-канальные модели измерений, полиморфные термопары и калибровки, кодеки .fus, .vtaz, .tda, .fus-mdt",
+      "description": "По-канальные модели измерений, полиморфные термопары и калибровки, кодек .fus / .fusa, утилиты сплэша, логирования и сборки",
       "tags": ["project", "programming"]
     },
     {

@@ -5,11 +5,14 @@ import contextlib
 import importlib.resources
 import io
 import platform
+import re
 import struct
 import sys
 import tomllib
 import traceback
 from collections import deque
+from dataclasses import dataclass
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TextIO
@@ -572,10 +575,61 @@ def _format_log_record(record: Record) -> str:
     return fmt
 
 
+LOG_SEQ_FILENAME = ".log_seq"
+MAX_RETAINED_LOGS = 200
+_SEQ_LOG_RE = re.compile(r"^(\d+)_.*\.log$")
+
+
+@dataclass(frozen=True, order=True)
+class _NumberedLogFile:
+    seq: int
+    path: Path
+
+
+def _allocate_log_file(
+    log_dir: Path,
+    *,
+    max_retained: int = MAX_RETAINED_LOGS,
+) -> Path:
+    """Выделяет следующий монотонный порядковый номер лога и чистит старые по номеру."""
+    log_dir.mkdir(parents=True, exist_ok=True)
+    seq_file = log_dir / LOG_SEQ_FILENAME
+    saved_seq = 0
+    if seq_file.is_file():
+        with contextlib.suppress(OSError, ValueError):
+            saved_seq = max(0, int(seq_file.read_text(encoding="utf-8").strip()))
+
+    numbered: list[_NumberedLogFile] = []
+    max_existing = 0
+    for entry in log_dir.iterdir():
+        if not entry.is_file():
+            continue
+        match = _SEQ_LOG_RE.match(entry.name)
+        if match:
+            num = int(match.group(1))
+            numbered.append(_NumberedLogFile(seq=num, path=entry))
+            max_existing = max(max_existing, num)
+
+    next_seq = max(saved_seq, max_existing) + 1
+    with contextlib.suppress(OSError):
+        tmp_seq = log_dir / f"{LOG_SEQ_FILENAME}.tmp"
+        tmp_seq.write_text(str(next_seq), encoding="utf-8")
+        tmp_seq.replace(seq_file)
+
+    if max_retained > 0 and len(numbered) >= max_retained:
+        excess = len(numbered) - (max_retained - 1)
+        for item in sorted(numbered)[:excess]:
+            with contextlib.suppress(OSError):
+                item.path.unlink()
+
+    stamp = datetime.now().astimezone().strftime("%Y-%m-%d_%H-%M-%S")
+    return log_dir / f"{next_seq:05d}_{stamp}.log"
+
+
 def setup_fusion_logging(appdata_path: Path) -> Path:
     """Настраивает запись loguru, перехват stdout/stderr и GUI-показ необработанных исключений."""
     log_dir = appdata_path / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = _allocate_log_file(log_dir)
     logger.remove()
     orig_err = getattr(sys, "__stderr__", None)
     if orig_err is not None and not getattr(sys, "frozen", False):
@@ -587,13 +641,11 @@ def setup_fusion_logging(appdata_path: Path) -> Path:
             diagnose=False,
         )
     logger.add(
-        log_dir / "{time}.log",
+        log_file,
         level="DEBUG",
         format=_format_log_record,
         backtrace=True,
         diagnose=False,
-        rotation="1 week",
-        retention="1 month",
         encoding="utf-8",
     )
     logger.add(
@@ -617,6 +669,7 @@ def setup_fusion_logging(appdata_path: Path) -> Path:
         python=sys.version.split()[0],  # noqa: MI001
         frozen=bool(getattr(sys, "frozen", False)),
         appdata=str(appdata_path),
+        log_file=log_file.name,
     ).info("Application logging initialized")
     return log_dir
 

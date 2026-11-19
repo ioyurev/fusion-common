@@ -33,7 +33,9 @@ from fusion_common.math_utils import (
 from fusion_common.migration import (
     CURRENT_SCHEMA_VERSION,
     MIGRATIONS,
+    IncompatibleFileVersionError,
     migrate_manifest_dict,
+    validate_manifest_dict,
 )
 from fusion_common.models import (
     AnalysisStateModel,
@@ -114,6 +116,7 @@ __all__ = [
     "FusionAboutDialog",
     "FusionLogViewerDialog",
     "IdentityCalibration",
+    "IncompatibleFileVersionError",
     "LookupSplineCalibration",
     "LookupSplineSensorModel",
     "MeasurementManifest",
@@ -160,5 +163,6 @@ __all__ = [
     "show_fusion_license",
     "show_fusion_logs",
     "show_startup_splash",
+    "validate_manifest_dict",
     "write_pyinstaller_version_file",
 ]
