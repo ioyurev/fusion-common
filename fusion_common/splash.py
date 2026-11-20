@@ -586,10 +586,11 @@ class _NumberedLogFile:
     path: Path
 
 
-def _allocate_log_file(
+def allocate_log_file(
     log_dir: Path,
     *,
     max_retained: int = MAX_RETAINED_LOGS,
+    now: datetime | None = None,
 ) -> Path:
     """Выделяет следующий монотонный порядковый номер лога и чистит старые по номеру."""
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -622,14 +623,15 @@ def _allocate_log_file(
             with contextlib.suppress(OSError):
                 item.path.unlink()
 
-    stamp = datetime.now().astimezone().strftime("%Y-%m-%d_%H-%M-%S")
+    current_dt = now if now is not None else datetime.now().astimezone()
+    stamp = current_dt.strftime("%Y-%m-%d_%H-%M-%S")
     return log_dir / f"{next_seq:05d}_{stamp}.log"
 
 
 def setup_fusion_logging(appdata_path: Path) -> Path:
     """Настраивает запись loguru, перехват stdout/stderr и GUI-показ необработанных исключений."""
     log_dir = appdata_path / "logs"
-    log_file = _allocate_log_file(log_dir)
+    log_file = allocate_log_file(log_dir)
     logger.remove()
     orig_err = getattr(sys, "__stderr__", None)
     if orig_err is not None and not getattr(sys, "frozen", False):

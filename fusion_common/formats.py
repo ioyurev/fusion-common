@@ -102,6 +102,6 @@ def load_fus(path: Path) -> MeasurementRecord:
         manifest=manifest,
         data=data,
         source_path=path,
-        source_format="FUS",
+        source_format="FUSA" if path.suffix.lower() == ".fusa" else "FUS",
         source_version=manifest.schema_version,
     )

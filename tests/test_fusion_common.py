@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -21,7 +22,9 @@ from fusion_common import (
     PiecewisePolynomialSegment,
     PiecewisePolynomialSensorModel,
     Standard,
+    allocate_log_file,
     evaluate_channel_temperature,
+    is_newer_version,
     load_fus,
     make_vr_thermocouple,
     make_xa_thermocouple,
@@ -158,6 +161,10 @@ def test_schema_migration_boundary() -> None:
 
 
 def test_validate_manifest_forward_compat_and_newer_kind() -> None:
+    assert is_newer_version("1.1", "1.0") is True
+    assert is_newer_version("0.7.3", "0.7.3") is False
+    assert is_newer_version("0.7.2", "0.7.3") is False
+
     manifest = validate_manifest_dict(
         {
             "schema_version": "1.0",
@@ -210,6 +217,19 @@ def test_load_fus_corrupted_zip_and_missing_members(tmp_path: Path) -> None:
         zf.writestr("manifest.json", MeasurementManifest(sample="S").model_dump_json())
     with pytest.raises(ValueError, match=r"отсутствует data\.csv"):
         load_fus(no_data)
+
+    fusa_path = tmp_path / "project.fusa"
+    save_fus(
+        MeasurementRecord(
+            manifest=MeasurementManifest(
+                sample="S",
+                channels=[ChannelDescriptor(column="time", label="Время", unit="s")],
+            ),
+            data={"time": np.array([0.0, 1.0])},
+        ),
+        fusa_path,
+    )
+    assert load_fus(fusa_path).source_format == "FUSA"
 
 
 def test_multi_thermocouple_fus_roundtrip(tmp_path: Path) -> None:
@@ -384,29 +404,29 @@ def test_packaging_helpers(tmp_path: Path) -> None:
 
 
 def test_sequential_log_allocation_and_retention(tmp_path: Path) -> None:
-    from fusion_common.splash import LOG_SEQ_FILENAME, _allocate_log_file
+    from fusion_common.splash import LOG_SEQ_FILENAME
 
     log_dir = tmp_path / "logs"
-    created: list[Path] = []
+    reset_clock = datetime(2025, 9, 12, 5, 36, 42, tzinfo=UTC)
     for expected_idx in range(1, 5):
-        path = _allocate_log_file(log_dir, max_retained=3)
-        assert path.name.startswith(f"{expected_idx:05d}_")
+        path = allocate_log_file(log_dir, max_retained=3, now=reset_clock)
+        assert path.name == f"{expected_idx:05d}_2025-09-12_05-36-42.log"
         path.write_text("entry\n", encoding="utf-8")
-        created.append(path)
 
     remaining = sorted(p.name for p in log_dir.glob("*.log"))
     assert len(remaining) == 3
-    assert remaining[0].startswith("00002_")  # noqa: MI001
-    assert remaining[2].startswith("00004_")  # noqa: MI001
+    first_log, *_, last_log = remaining
+    assert first_log.startswith("00002_")
+    assert last_log.startswith("00004_")
 
     # Очистка папки логов не сбрасывает счётчик при наличии .log_seq
     for p in log_dir.glob("*.log"):
         p.unlink()
-    p5 = _allocate_log_file(log_dir, max_retained=3)
+    p5 = allocate_log_file(log_dir, max_retained=3, now=reset_clock)
     assert p5.name.startswith("00005_")
     p5.write_text("entry\n", encoding="utf-8")
 
     # Удаление .log_seq восстанавливает счётчик по максимальному номеру оставшегося файла
     (log_dir / LOG_SEQ_FILENAME).unlink()
-    p6 = _allocate_log_file(log_dir, max_retained=3)
+    p6 = allocate_log_file(log_dir, max_retained=3, now=reset_clock)
     assert p6.name.startswith("00006_")

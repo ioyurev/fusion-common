@@ -28,7 +28,8 @@ def _parse_version_tuple(ver_str: str) -> tuple[int, ...] | None:
     return tuple(int(part) for part in match.group(1).split("."))
 
 
-def _is_newer_version(file_ver: str, current_ver: str) -> bool:
+def is_newer_version(file_ver: str, current_ver: str) -> bool:
+    """Проверяет, является ли семантическая версия file_ver строго новее current_ver."""
     parsed_file = _parse_version_tuple(file_ver)
     parsed_curr = _parse_version_tuple(current_ver)
     if parsed_file is None or parsed_curr is None:
@@ -81,7 +82,7 @@ def migrate_manifest_dict(raw: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"Обнаружен цикл миграции схемы для версии {version}")
         visited.add(version)
         if version not in MIGRATIONS:
-            if _is_newer_version(version, CURRENT_SCHEMA_VERSION):
+            if is_newer_version(version, CURRENT_SCHEMA_VERSION):
                 sw_hint = _format_software_hint(data)
                 raise IncompatibleFileVersionError(
                     f"Неподдерживаемая версия схемы .fus: '{version}' "
@@ -119,7 +120,7 @@ def validate_manifest_dict(
     try:
         manifest = MeasurementManifest.model_validate(migrated)
     except ValidationError as exc:
-        if file_common and cur_common and _is_newer_version(file_common, cur_common):
+        if file_common and cur_common and is_newer_version(file_common, cur_common):
             sw_part = f", приложение v{file_sw.lstrip('v')}" if file_sw else ""
             raise IncompatibleFileVersionError(
                 "Не удалось прочитать файл: он создан в более новой версии Fusion "
@@ -129,7 +130,7 @@ def validate_manifest_dict(
             ) from exc
         raise
 
-    if file_common and cur_common and _is_newer_version(file_common, cur_common):
+    if file_common and cur_common and is_newer_version(file_common, cur_common):
         log.bind(
             file_common_version=file_common,
             current_common_version=cur_common,
