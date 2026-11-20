@@ -33,6 +33,7 @@
       "name": "Fusion-Common: ядро термометрии, калибровок и форматов",
       "patterns": [
         "fusion_common/*.py",
+        "fusion_common/py.typed",
         "fusion_common/assets/*.html",
         "fusion_common/assets/*.md"
       ],
